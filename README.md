@@ -1,4 +1,4 @@
-# Plugin Name
+# Plugin: Account Based Marketing (ABM) by Leuchtfeuer
 
 ## Overview / Purpose / Features
 Provide a short description of the plugin's purpose, key features, and benefits.
