@@ -18,6 +18,8 @@ return function (ContainerConfigurator $configurator): void {
     $services->load('MauticPlugin\\LeuchtfeuerAccountBasedMarketingAbmBundle\\', '../')
         ->exclude('../{'.implode(',', array_merge(MauticCoreExtension::DEFAULT_EXCLUDES, $excludes)).'}');
 
+    $services->load('MauticPlugin\\LeuchtfeuerAccountBasedMarketingAbmBundle\\Entity\\', '../Entity/*Repository.php');
+
     $services->get(LeuchtfeuerAccountBasedMarketingAbmIntegration::class)
         ->tag('mautic.integration')
         ->tag('mautic.basic_integration');
