@@ -115,9 +115,7 @@ class CompanySegmentType extends AbstractType
                         new CompanySegmentCircularReference([
                             'message' => 'mautic.core.segment.circular_dependency_exists',
                         ]),
-                        new SegmentDate([
-                            'message' => 'mautic.lead.segment.date_invalid',
-                        ]),
+                        new SegmentDate(message: 'mautic.lead.segment.date_invalid'),
                     ],
                 ]
             )->addModelTransformer($filterModalTransformer)
