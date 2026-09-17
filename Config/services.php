@@ -33,4 +33,8 @@ return function (ContainerConfigurator $configurator): void {
     // ModelFactory resolves the model key 'abm.company_segment' (used e.g. by
     // the publish status toggle in the templates) to this container key.
     $services->alias('mautic.abm.model.company_segment', \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel::class);
+
+    // Registers the companysegment search command on the company repository.
+    $services->set(\MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanyModelDecorated::class)
+        ->decorate(\Mautic\LeadBundle\Model\CompanyModel::class);
 };
