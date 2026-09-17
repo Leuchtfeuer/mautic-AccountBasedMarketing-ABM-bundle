@@ -7,6 +7,27 @@ return [
     'description' => 'A suite of company-centric enhancements like Company Segments and Company Scoring',
     'version'     => '1.0.0',
     'author'      => 'Leuchtfeuer Digital Marketing GmbH',
+    'menu'        => [
+        'main' => [
+            'items' => [
+                'mautic.company_segments.menu.index' => [
+                    'access'   => ['lead:leads:viewown', 'lead:leads:viewother'],
+                    'route'    => 'mautic_company_segments_index',
+                    'parent'   => 'mautic.companies.menu.index',
+                    'priority' => 15,
+                ],
+                // Makes "Companies" itself clickable as a sub item below the
+                // core "Companies" node that now acts as the parent.
+                'mautic.companies.menu.sub.index' => [
+                    'id'       => 'mautic.companies.menu.index',
+                    'parent'   => 'mautic.companies.menu.index',
+                    'route'    => 'mautic_company_index',
+                    'access'   => ['lead:leads:viewother'],
+                    'priority' => 100,
+                ],
+            ],
+        ],
+    ],
     'routes'      => [
         'main' => [
             'mautic_company_segments_index' => [
