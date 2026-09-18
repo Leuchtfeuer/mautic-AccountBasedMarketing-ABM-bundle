@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\Extension;
 
+use Mautic\CoreBundle\Form\Type\DynamicContentFilterEntryFiltersType;
 use Mautic\DynamicContentBundle\Form\Type\DwcEntryFiltersType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\AbstractTypeExtension;
@@ -27,7 +28,9 @@ final class DwcEntryFiltersTypeExtension extends AbstractTypeExtension
 
     public static function getExtendedTypes(): iterable
     {
-        return [DwcEntryFiltersType::class];
+        // Covers dynamic web content and email dynamic content filter entries;
+        // both build their filter child via the core FilterTrait.
+        return [DwcEntryFiltersType::class, DynamicContentFilterEntryFiltersType::class];
     }
 
     public function configureOptions(OptionsResolver $resolver): void

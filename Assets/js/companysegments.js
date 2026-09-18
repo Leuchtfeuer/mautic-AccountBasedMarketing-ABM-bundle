@@ -281,6 +281,35 @@ Mautic.companyBatchSubmit = function() {
     return false;
 };
 
+if (typeof Mautic.addDynamicContentFilter !== 'undefined') {
+    var originalAddDynamicContentFilter = Mautic.addDynamicContentFilter;
+
+    Mautic.addDynamicContentFilter = function (selectedFilter, jQueryVariant) {
+        var mQuery = (typeof jQueryVariant != 'undefined') ? jQueryVariant : window.mQuery;
+        var selectedOption = mQuery('option[data-mautic="available_' + selectedFilter + '"]').first();
+        var fieldType = selectedOption.data('field-type');
+
+        if (fieldType === 'company_segments') {
+            // The leadlist type makes the core function render a select and
+            // fill it from data-field-list; the type field is set back below.
+            selectedOption.data('field-type', 'leadlist');
+            var result = originalAddDynamicContentFilter.apply(this, arguments);
+            selectedOption.data('field-type', 'company_segments');
+
+            var activeDynamicContent = mQuery('.tab-pane.dynamic-content').filter(':visible');
+            var activeDynamicContentFilterContainer = activeDynamicContent
+                .find('div[data-filter-container]').filter(':visible');
+
+            activeDynamicContentFilterContainer.children('.panel').last()
+                .find('input[name$="[type]"]').val('company_segments');
+
+            return result;
+        }
+
+        return originalAddDynamicContentFilter.apply(this, arguments);
+    };
+}
+
 if (typeof Mautic.addDwcFilter !== 'undefined') {
     var originalAddDwcFilter = Mautic.addDwcFilter;
 
