@@ -7,6 +7,11 @@ return [
     'description' => 'A suite of company-centric enhancements like Company Segments and Company Scoring',
     'version'     => '1.0.0',
     'author'      => 'Leuchtfeuer Digital Marketing GmbH',
+    'categories'  => [
+        'company_segment' => [
+            'class' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment::class,
+        ],
+    ],
     'menu'        => [
         'main' => [
             'items' => [
