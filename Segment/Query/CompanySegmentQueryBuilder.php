@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Segment\Query;
 
 use Doctrine\DBAL\Connections\PrimaryReadReplicaConnection;
-use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Mautic\LeadBundle\Entity\CompanyRepository;
 use Mautic\LeadBundle\Segment\ContactSegmentFilter;
@@ -97,63 +96,6 @@ final class CompanySegmentQueryBuilder
     }
 
     /**
-     * @throws SegmentQueryException
-     */
-    public function assembleCompanySegmentQueryBuilderLeadSegment(CompanySegment $companySegment, ContactSegmentFilters $segmentFilters, bool $changeAlias = false): QueryBuilder
-    {
-        $connection = $this->entityManager->getConnection();
-        if ($connection instanceof PrimaryReadReplicaConnection) {
-            $connection->ensureConnectedToReplica();
-        }
-
-        $queryBuilder = new QueryBuilder($connection);
-
-        $companyTableAlias = $changeAlias ? $this->generateRandomParameterName() : $this->companyRepository->getTableAlias();
-
-        $leadTableAlias           = $this->generateRandomParameterName();
-        $companyLeadsTableAlias   = $this->generateRandomParameterName();
-        $companySegmentTableAlias = $this->generateRandomParameterName();
-        $queryBuilder->select($leadTableAlias.'.id')->from($this->getBaseTableName().'leads', $leadTableAlias)
-            ->join(
-                $leadTableAlias,
-                $this->getBaseTableName().'companies_leads',
-                $companyLeadsTableAlias,
-                $companyLeadsTableAlias.'.lead_id = '.$leadTableAlias.'.id and '.$companyLeadsTableAlias.'.is_primary = 1'
-            )->join(
-                $companyLeadsTableAlias,
-                $this->getBaseTableName().'companies',
-                $companyTableAlias,
-                $companyTableAlias.'.id = '.$companyLeadsTableAlias.'.company_id'
-            )->join(
-                $companyTableAlias,
-                $this->getBaseTableName().SegmentCompany::TABLE_NAME,
-                $companySegmentTableAlias,
-                $companySegmentTableAlias.'.segment_id = '.$companySegment->getId().' and '.$companySegmentTableAlias.'.manually_removed = 0',
-            );
-
-        $this->getResolutionPlan($companySegment);
-
-        $params     = $queryBuilder->getParameters();
-        $paramTypes = $queryBuilder->getParameterTypes();
-
-        /** @var ContactSegmentFilter $filter */
-        foreach ($segmentFilters as $filter) {
-            if ($this->dispatchPluginFilteringEvent($filter, $queryBuilder)) {
-                continue;
-            }
-
-            $queryBuilder = $filter->applyQuery($queryBuilder);
-            $params       = array_merge($params, $queryBuilder->getParameters());
-            $paramTypes   = array_merge($paramTypes, $queryBuilder->getParameterTypes());
-        }
-
-        $queryBuilder->setParameters($params, $paramTypes);
-        $queryBuilder->applyStackLogic();
-
-        return $queryBuilder;
-    }
-
-    /**
      * @throws \Doctrine\DBAL\Exception
      */
     public function wrapInCount(QueryBuilder $qb): QueryBuilder
@@ -223,30 +165,6 @@ final class CompanySegmentQueryBuilder
         return $queryBuilder;
     }
 
-    public function addCompanySegmentQuery(QueryBuilder $queryBuilder, CompanySegment $companySegment): QueryBuilder
-    {
-        $companiesTableAlias = $queryBuilder->getTableAlias($this->getBaseTableName().'companies');
-        \assert(is_string($companiesTableAlias));
-        $tableAlias = $this->generateRandomParameterName();
-
-        $existsQueryBuilder = $queryBuilder->createQueryBuilder();
-
-        $existsQueryBuilder
-            ->select('null')
-            ->from($this->getBaseTableName().SegmentCompany::TABLE_NAME, $tableAlias)
-            ->andWhere($queryBuilder->expr()->eq($tableAlias.'.segment_id', (int) $companySegment->getId()));
-
-        $existingQueryWherePart = $existsQueryBuilder->getQueryPart('where');
-        $existsQueryBuilder->where(sprintf('%s.id = %s.company_id', $companiesTableAlias, $tableAlias));
-        $existsQueryBuilder->andWhere($existingQueryWherePart);
-
-        $queryBuilder->andWhere(
-            $queryBuilder->expr()->exists($existsQueryBuilder->getSQL())
-        );
-
-        return $queryBuilder;
-    }
-
     public function queryBuilderGenerated(CompanySegment $companySegment, QueryBuilder $queryBuilder): void
     {
         if (!$this->dispatcher->hasListeners(CompanySegmentQueryBuilderGeneratedEvent::class)) {
@@ -255,69 +173,6 @@ final class CompanySegmentQueryBuilder
 
         $event = new CompanySegmentQueryBuilderGeneratedEvent($companySegment, $queryBuilder);
         $this->dispatcher->dispatch($event);
-    }
-
-    public function addManuallySubscribedQuery(QueryBuilder $queryBuilder, CompanySegment $companySegment): QueryBuilder
-    {
-        \assert(null !== $companySegment->getId());
-        $companyTableAlias = $queryBuilder->getTableAlias($this->getBaseTableName().'companies');
-
-        if (!is_string($companyTableAlias)) {
-            throw new \LogicException('The table alias for '.$this->getBaseTableName().'companies must be a string.');
-        }
-
-        $tableAlias = $this->generateRandomParameterName();
-
-        $existsQueryBuilder = $queryBuilder->createQueryBuilder();
-
-        $existsQueryBuilder
-            ->select('null')
-            ->from($this->getBaseTableName().SegmentCompany::TABLE_NAME, $tableAlias)
-            ->andWhere($queryBuilder->expr()->eq($tableAlias.'.segment_id', $companySegment->getId()))
-            ->andWhere(
-                $queryBuilder->expr()->or(
-                    $queryBuilder->expr()->eq($tableAlias.'.manually_added', ':true'),
-                    $queryBuilder->expr()->eq($tableAlias.'.manually_removed', ':false')
-                )
-            );
-
-        $existingQueryWherePart = $existsQueryBuilder->getQueryPart('where');
-        $existsQueryBuilder->where(sprintf('%s.id = %s.company_id', $companyTableAlias, $tableAlias));
-        $existsQueryBuilder->andWhere($existingQueryWherePart);
-
-        $queryBuilder->orWhere(
-            $queryBuilder->expr()->exists($existsQueryBuilder->getSQL())
-        )
-            ->setParameter('true', true, ParameterType::BOOLEAN)
-            ->setParameter('false', false, ParameterType::BOOLEAN);
-
-        return $queryBuilder;
-    }
-
-    /**
-     * @throws QueryException
-     */
-    public function addManuallyUnsubscribedQuery(QueryBuilder $queryBuilder, CompanySegment $companySegment): QueryBuilder
-    {
-        \assert(null !== $companySegment->getId());
-        $companyTableAlias = $queryBuilder->getTableAlias($this->getBaseTableName().'companies');
-
-        if (!is_string($companyTableAlias)) {
-            throw new \LogicException('The table alias for '.$this->getBaseTableName().'companies must be a string.');
-        }
-
-        $tableAlias = $this->generateRandomParameterName();
-        $queryBuilder->leftJoin(
-            $companyTableAlias,
-            $this->getBaseTableName().SegmentCompany::TABLE_NAME,
-            $tableAlias,
-            $companyTableAlias.'.id = '.$tableAlias.'.company_id and '.$tableAlias.'.segment_id = :manually_unsubscribed_segment_id'
-        )->setParameter('manually_unsubscribed_segment_id', $companySegment->getId())
-            ->addJoinCondition($tableAlias, $queryBuilder->expr()->eq($tableAlias.'.manually_removed', ':true'))
-            ->andWhere($queryBuilder->expr()->isNull($tableAlias.'.company_id'))
-            ->setParameter('true', true, ParameterType::BOOLEAN);
-
-        return $queryBuilder;
     }
 
     /**

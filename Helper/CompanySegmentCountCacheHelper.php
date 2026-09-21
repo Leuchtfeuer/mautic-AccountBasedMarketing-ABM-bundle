@@ -51,16 +51,6 @@ final readonly class CompanySegmentCountCacheHelper
     /**
      * @throws InvalidArgumentException
      */
-    public function invalidateSegmentCompanyCount(int $segmentId): void
-    {
-        if ($this->hasSegmentCompanyCount($segmentId)) {
-            $this->cacheProvider->deleteItem($this->generateCacheKey($segmentId));
-        }
-    }
-
-    /**
-     * @throws InvalidArgumentException
-     */
     public function incrementSegmentCompanyCount(int $segmentId): void
     {
         $count = $this->hasSegmentCompanyCount($segmentId) ? $this->getSegmentCompanyCount($segmentId) : 0;

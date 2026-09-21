@@ -18,11 +18,10 @@ class CampaignEventCompanySegmentsType extends AbstractType
             'companySegments',
             CompanySegmentListType::class,
             [
-                'global_only' => true,
-                'label'       => 'mautic.company_segments.campaign.event.segments',
-                'label_attr'  => ['class' => 'control-label'],
-                'multiple'    => true,
-                'required'    => false,
+                'label'      => 'mautic.company_segments.campaign.event.segments',
+                'label_attr' => ['class' => 'control-label'],
+                'multiple'   => true,
+                'required'   => false,
             ]
         );
     }

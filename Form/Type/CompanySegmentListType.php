@@ -37,7 +37,6 @@ class CompanySegmentListType extends AbstractType
 
                 return $choices;
             },
-            'global_only'            => false,
             'preference_center_only' => false,
             'required'               => false,
         ]);

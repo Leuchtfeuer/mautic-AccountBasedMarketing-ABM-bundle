@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type;
 
 use Mautic\CoreBundle\Form\Type\FormButtonsType;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
@@ -16,6 +18,11 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
  */
 class CompanyBatchType extends AbstractType
 {
+    public function __construct(
+        private readonly CompanySegmentModel $companySegmentModel,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder->add(
@@ -66,7 +73,29 @@ class CompanyBatchType extends AbstractType
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setRequired('items');
+        $resolver->setDefaults([
+            'items' => function (Options $options): array {
+                $segments = $this->companySegmentModel->getEntities([
+                    'filter' => [
+                        'force' => [
+                            [
+                                'column' => 'cs.isPublished',
+                                'expr'   => 'eq',
+                                'value'  => true,
+                            ],
+                        ],
+                    ],
+                    'orderBy' => 'cs.name',
+                ]);
+
+                $items = [];
+                foreach ($segments as $segment) {
+                    $items[$segment->getName().' ('.$segment->getId().')'] = $segment->getId();
+                }
+
+                return $items;
+            },
+        ]);
         $resolver->setAllowedTypes('items', 'array');
     }
 

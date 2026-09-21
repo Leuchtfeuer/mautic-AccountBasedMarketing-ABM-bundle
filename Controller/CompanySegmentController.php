@@ -8,6 +8,7 @@ use Mautic\CoreBundle\Controller\AbstractStandardFormController;
 use Mautic\CoreBundle\Exception\DeleteEntityDependencyException;
 use Mautic\CoreBundle\Security\Permissions\CorePermissions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Exception\DeleteCompanySegmentsDependencyException;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\Form;
@@ -16,10 +17,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class CompanySegmentController extends AbstractStandardFormController
 {
-    private \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository;
+    private CompanySegmentRepository $companySegmentRepository;
 
     #[\Symfony\Contracts\Service\Attribute\Required]
-    public function autowireCompanySegmentController(\MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository): void
+    public function autowireCompanySegmentController(CompanySegmentRepository $companySegmentRepository): void
     {
         $this->companySegmentRepository = $companySegmentRepository;
     }

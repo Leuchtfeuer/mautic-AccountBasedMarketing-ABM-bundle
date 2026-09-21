@@ -215,7 +215,7 @@ class CompanySegmentModel extends FormModel
         };
 
         if (null === $eventClass && null === $event) {
-            throw new \RuntimeException('Either the Event or proper action should be provided.');
+            return null;
         }
 
         if ($this->dispatcher->hasListeners($eventClass ?? $event::class)) {
@@ -431,6 +431,9 @@ class CompanySegmentModel extends FormModel
                 $segmentCompany->setManuallyRemoved(true);
 
                 $companySaveSegment[$companySegment->getId()] = $segmentCompany;
+            } else {
+                // Manually added membership survives an automatic removal — no change, no count decrement.
+                continue;
             }
             if (is_int($companySegment->getId())) {
                 $this->getCacheHelper()->decrementSegmentCompanyCount($companySegment->getId());

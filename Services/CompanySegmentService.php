@@ -28,51 +28,6 @@ final class CompanySegmentService
     }
 
     /**
-     * @return array<int, array{count: string, maxId: string, minId: string}>
-     *
-     * @throws \Exception
-     */
-    public function getTotalCompanySegmentsCompaniesCount(CompanySegment $companySegment): array
-    {
-        $segmentFilters = $this->getSegmentFiltersFromArray(
-            $companySegment->getFilters(),
-            []
-        );
-
-        $companySegmentId = $companySegment->getId();
-        \assert(null !== $companySegmentId);
-        if (0 === count($segmentFilters)) {
-            $this->logger->debug('Company Segment QB: Segment has no filters', ['segmentId' => $companySegmentId]);
-
-            return [
-                $companySegmentId => [
-                    'count' => '0',
-                    'maxId' => '0',
-                    'minId' => '0',
-                ],
-            ];
-        }
-
-        $qb = $this->getTotalSegmentCompaniesQuery($companySegment);
-
-        $qb = $this->companySegmentQueryBuilder->wrapInCount($qb);
-
-        $debug = '';
-        if (is_string($qb->getDebugOutput())) {
-            $debug = $qb->getDebugOutput();
-        }
-        $this->logger->debug('Company Segment QB: Create SQL: '.$debug, ['segmentId' => $companySegmentId]);
-
-        $result = $this->timedFetch($qb, $companySegmentId);
-        \assert(3 === count($result));
-        \assert(is_string($result['count']) && is_numeric($result['count']));
-        \assert(is_string($result['maxId']) && is_numeric($result['maxId']));
-        \assert(is_string($result['minId']) && is_numeric($result['minId']));
-
-        return [$companySegmentId => $result];
-    }
-
-    /**
      * @param array<string, mixed> $batchLimiters
      *
      * @return array<int, mixed[]>
@@ -261,24 +216,6 @@ final class CompanySegmentService
         $this->companySegmentQueryBuilder->queryBuilderGenerated($segment, $queryBuilder);
 
         return $queryBuilder;
-    }
-
-    /**
-     * @throws \Exception
-     *
-     * @see \Mautic\LeadBundle\Segment\ContactSegmentService::getTotalSegmentContactsQuery
-     */
-    private function getTotalSegmentCompaniesQuery(CompanySegment $companySegment): QueryBuilder
-    {
-        $segmentFilters = $this->getSegmentFiltersFromArray(
-            $companySegment->getFilters(),
-            []
-        );
-
-        $queryBuilder = $this->companySegmentQueryBuilder->assembleCompanySegmentQueryBuilder($companySegment, $segmentFilters);
-        $queryBuilder = $this->companySegmentQueryBuilder->addManuallySubscribedQuery($queryBuilder, $companySegment);
-
-        return $this->companySegmentQueryBuilder->addManuallyUnsubscribedQuery($queryBuilder, $companySegment);
     }
 
     /**

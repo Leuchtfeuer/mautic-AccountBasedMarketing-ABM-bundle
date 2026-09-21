@@ -7,7 +7,6 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller;
 use Mautic\CoreBundle\Controller\AbstractFormController;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CompanyBatchType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentActionModel;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,13 +15,32 @@ final class BatchCompanySegmentController extends AbstractFormController
 {
     public function setAction(CompanySegmentActionModel $segmentActionModel, Request $request): JsonResponse
     {
-        $requestParameters = $request->request->all();
-        $params            = $requestParameters['company_batch'] ?? [];
-        $companyIds        = [];
+        if (true !== $this->security->isGranted(['lead:leads:editown', 'lead:leads:editother'], 'MATCH_ONE')) {
+            $this->throwAccessDenied();
+        }
+
+        $form = $this->createForm(CompanyBatchType::class);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            $this->addFlashMessage('mautic.core.error.badrequest');
+
+            return new JsonResponse([
+                'closeModal' => true,
+                'flashes'    => $this->getFlashContent(),
+            ]);
+        }
+
+        $params     = $form->getData();
+        $companyIds = [];
 
         if (is_string($params['ids'] ?? null) && '' !== $params['ids']) {
-            /** @var array<int> $companyIds */
-            $companyIds = json_decode($params['ids'], true, 512, JSON_THROW_ON_ERROR);
+            try {
+                /** @var array<int> $companyIds */
+                $companyIds = json_decode($params['ids'], true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                $companyIds = [];
+            }
         }
 
         if ([] !== $companyIds && is_array($companyIds)) {
@@ -52,26 +70,9 @@ final class BatchCompanySegmentController extends AbstractFormController
         ]);
     }
 
-    public function indexAction(CompanySegmentModel $segmentModel): Response
+    public function indexAction(): Response
     {
-        $route    = $this->generateUrl('mautic_company_segments_batch_company_set');
-        $segments = $segmentModel->getEntities([
-            'filter' => [
-                'force' => [
-                    [
-                        'column' => 'cs.isPublished',
-                        'expr'   => 'eq',
-                        'value'  => true,
-                    ],
-                ],
-            ],
-            'orderBy' => 'cs.name',
-        ]);
-        $items = [];
-
-        foreach ($segments as $segment) {
-            $items[$segment->getName().' ('.$segment->getId().')'] = $segment->getId();
-        }
+        $route = $this->generateUrl('mautic_company_segments_batch_company_set');
 
         return $this->delegateView(
             [
@@ -80,7 +81,6 @@ final class BatchCompanySegmentController extends AbstractFormController
                         CompanyBatchType::class,
                         [],
                         [
-                            'items'  => $items,
                             'action' => $route,
                         ]
                     )->createView(),

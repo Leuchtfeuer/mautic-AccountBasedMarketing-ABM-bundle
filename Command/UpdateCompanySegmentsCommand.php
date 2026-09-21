@@ -8,6 +8,7 @@ use Mautic\CoreBundle\Command\ModeratedCommand;
 use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Mautic\CoreBundle\Helper\PathsHelper;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Services\CompanySegmentRebuildService;
@@ -34,7 +35,7 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
         private readonly TranslatorInterface $translator,
         PathsHelper $pathsHelper,
         CoreParametersHelper $coreParametersHelper,
-        private readonly \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository,
+        private readonly CompanySegmentRepository $companySegmentRepository,
     ) {
         parent::__construct($pathsHelper, $coreParametersHelper);
     }
@@ -161,7 +162,6 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
             $this->companyRebuildService->rebuildDependentSegments($segment, $rebuiltSegments, $batch, $max, $output, $enableTimeMeasurement, [], $excludeSegments);
         }
 
-        $rebuiltSegments[] = (int) $segment->getId();
         $this->companyRebuildService->rebuildSegment($segment, $batch, $max, $output, $enableTimeMeasurement);
 
         return Command::SUCCESS;

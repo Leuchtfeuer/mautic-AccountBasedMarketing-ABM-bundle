@@ -229,12 +229,8 @@ final class CompanySegmentModelTest extends TestCase
         $dispatcher->expects($this->never())
             ->method('hasListeners');
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Either the Event or proper action should be provided.');
-
         $model->setDispatcher($dispatcher);
-        $model->testDispatchEvent($action, $companySegment, true, null);
-        self::fail('After exception.');
+        $this->assertNotInstanceOf(\Symfony\Contracts\EventDispatcher\Event::class, $model->testDispatchEvent($action, $companySegment, true, null));
     }
 
     public function testEventsCallsWithProvidedEvent(): void

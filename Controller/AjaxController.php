@@ -8,22 +8,19 @@ use Mautic\CoreBundle\Controller\AjaxController as CommonAjaxController;
 use Mautic\CoreBundle\Helper\InputHelper;
 use Mautic\LeadBundle\Form\Type\FilterPropertiesType;
 use Mautic\LeadBundle\Provider\FormAdjustmentsProviderInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-/**
- * Called via the plugin ajax convention, e.g.
- * mautic_core_ajax?action=plugin:leuchtfeuerAccountBasedMarketingAbm:loadCompanySegmentFilterForm.
- */
 final class AjaxController extends CommonAjaxController
 {
-    private \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository;
+    private CompanySegmentRepository $companySegmentRepository;
 
     #[\Symfony\Contracts\Service\Attribute\Required]
-    public function autowireLeuchtfeuerAccountBasedMarketingAbmAjaxController(\MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository): void
+    public function autowireLeuchtfeuerAccountBasedMarketingAbmAjaxController(CompanySegmentRepository $companySegmentRepository): void
     {
         $this->companySegmentRepository = $companySegmentRepository;
     }
@@ -34,6 +31,10 @@ final class AjaxController extends CommonAjaxController
         FormAdjustmentsProviderInterface $formAdjustmentsProvider,
         CompanySegmentModel $companySegmentModel,
     ): JsonResponse {
+        if (true !== $this->security->isGranted(['lead:leads:editown', 'lead:leads:editother'], 'MATCH_ONE')) {
+            $this->throwAccessDenied();
+        }
+
         $fieldAlias  = InputHelper::clean($request->request->get('fieldAlias'));
         $fieldObject = InputHelper::clean($request->request->get('fieldObject'));
         $operator    = InputHelper::clean($request->request->get('operator'));
@@ -76,6 +77,10 @@ final class AjaxController extends CommonAjaxController
 
     public function getCompaniesCountAction(Request $request, CompanySegmentModel $companySegmentModel): JsonResponse
     {
+        if (true !== $this->security->isGranted(['lead:leads:viewown', 'lead:leads:viewother'], 'MATCH_ONE')) {
+            $this->throwAccessDenied();
+        }
+
         $id = InputHelper::clean($request->query->get('id'));
         $id = is_numeric($id) ? (int) $id : 0;
 

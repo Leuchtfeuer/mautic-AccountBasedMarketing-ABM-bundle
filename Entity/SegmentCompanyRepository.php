@@ -77,21 +77,6 @@ class SegmentCompanyRepository extends CommonRepository
     }
 
     /**
-     * @param int[] $segmentIds
-     *
-     * @return SegmentCompany[]
-     */
-    public function getSegmentCompaniesBySegmentIds(array $segmentIds): array
-    {
-        $result = $this->findBy([
-            'companySegment'  => $segmentIds,
-            'manuallyRemoved' => 0,
-        ]);
-
-        return array_values(array_unique($result, SORT_REGULAR));
-    }
-
-    /**
      * Check if contact's primary company is in any company segment.
      */
     public function isContactPrimaryCompanyInAnySegment(int $contactId): bool
