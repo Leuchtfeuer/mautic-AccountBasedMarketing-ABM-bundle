@@ -14,6 +14,7 @@ use Mautic\LeadBundle\Provider\TypeOperatorProviderInterface;
 use Mautic\LeadBundle\Segment\SegmentFilterIconTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentFiltersChoicesEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Provides listable published company custom fields as filter choices for the
@@ -25,6 +26,7 @@ class FilterOperatorSubscriber implements EventSubscriberInterface
     use SegmentFilterIconTrait;
 
     public function __construct(
+        private Config $config,
         private LeadFieldRepository $leadFieldRepository,
         private TypeOperatorProviderInterface $typeOperatorProvider,
         private FieldChoicesProviderInterface $fieldChoicesProvider,
@@ -42,6 +44,10 @@ class FilterOperatorSubscriber implements EventSubscriberInterface
 
     public function onCompanySegmentFiltersAddCustomFields(CompanySegmentFiltersChoicesEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $companyFields = $this->leadFieldRepository
             ->getListablePublishedFields()
             ->filter(static fn (LeadField $leadField): bool => 'company' === $leadField->getObject());

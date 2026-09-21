@@ -20,6 +20,13 @@ return [
                     'route'    => 'mautic_company_segments_index',
                     'parent'   => 'mautic.companies.menu.index',
                     'priority' => 15,
+                    'checks'   => [
+                        'integration' => [
+                            MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\LeuchtfeuerAccountBasedMarketingAbmIntegration::NAME => [
+                                'enabled' => true,
+                            ],
+                        ],
+                    ],
                 ],
                 // Makes "Companies" itself clickable as a sub item below the
                 // core "Companies" node that now acts as the parent.
@@ -29,6 +36,13 @@ return [
                     'route'    => 'mautic_company_index',
                     'access'   => ['lead:leads:viewother'],
                     'priority' => 100,
+                    'checks'   => [
+                        'integration' => [
+                            MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\LeuchtfeuerAccountBasedMarketingAbmIntegration::NAME => [
+                                'enabled' => true,
+                            ],
+                        ],
+                    ],
                 ],
             ],
         ],

@@ -8,6 +8,7 @@ use Mautic\CoreBundle\Command\ModeratedCommand;
 use Mautic\CoreBundle\Helper\CoreParametersHelper;
 use Mautic\CoreBundle\Helper\PathsHelper;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Services\CompanySegmentRebuildService;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -27,6 +28,7 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
     public const NAME = 'leuchtfeuer:abm:segments:update';
 
     public function __construct(
+        private readonly Config $config,
         private readonly CompanySegmentModel $companySegmentModel,
         private readonly CompanySegmentRebuildService $companyRebuildService,
         private readonly TranslatorInterface $translator,
@@ -78,6 +80,12 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        if (!$this->config->isPublished()) {
+            $output->writeln('<comment>The ABM plugin is not published. Skipping company segment rebuild.</comment>');
+
+            return Command::SUCCESS;
+        }
+
         $companySegmentId       = $input->getOption('companysegment-id');
         $batch                  = $input->getOption('batch-limit');
         $maxCompanies           = $input->getOption('max-companies');

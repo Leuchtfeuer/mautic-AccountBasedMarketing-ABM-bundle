@@ -10,10 +10,12 @@ use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 final readonly class DynamicContentSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private Config $config,
         private SegmentCompanyRepository $companySegmentRepository,
     ) {
     }
@@ -27,6 +29,10 @@ final readonly class DynamicContentSubscriber implements EventSubscriberInterfac
 
     public function onContactFilterEvaluate(ContactFiltersEvaluateEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         foreach ($event->getFilters() as $filter) {
             if ('company_segments' === $filter['type']) {
                 $event->setIsMatched(

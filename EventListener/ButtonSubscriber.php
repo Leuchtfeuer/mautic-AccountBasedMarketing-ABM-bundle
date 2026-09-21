@@ -11,6 +11,7 @@ use Mautic\CoreBundle\Twig\Helper\ButtonHelper;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Adds the "Change company segments" bulk action button to the companies list.
@@ -18,6 +19,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final class ButtonSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private readonly Config $config,
         private readonly TranslatorInterface $translator,
         private readonly RouterInterface $router,
         private readonly CorePermissions $security,
@@ -33,6 +35,10 @@ final class ButtonSubscriber implements EventSubscriberInterface
 
     public function injectViewButtons(CustomButtonEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         if (!str_contains($event->getRoute(), 'mautic_company_index')) {
             return;
         }

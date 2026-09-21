@@ -15,6 +15,7 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CampaignEve
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CompanySegmentActionType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Campaign action "Modify Company Segments" and condition "Company Segments"
@@ -28,6 +29,7 @@ final class CampaignSubscriber implements EventSubscriberInterface
     public const CONDITION_COMPANY_SEGMENTS     = 'leuchtfeuer.abm.company_segments';
 
     public function __construct(
+        private readonly Config $config,
         private readonly CompanyModel $companyModel,
         private readonly CompanySegmentModel $companySegmentModel,
     ) {
@@ -50,6 +52,10 @@ final class CampaignSubscriber implements EventSubscriberInterface
 
     public function onCampaignBuild(CampaignBuilderEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $event->addAction(self::ACTION_CHANGE_COMPANY_SEGMENTS, [
             'label'          => 'mautic.company_segments.campaign.action.change_segments',
             'description'    => 'mautic.company_segments.campaign.action.change_segments_descr',
@@ -67,6 +73,10 @@ final class CampaignSubscriber implements EventSubscriberInterface
 
     public function onCampaignTriggerActionChangeCompanySegments(PendingEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         if (!$event->checkContext(self::ACTION_CHANGE_COMPANY_SEGMENTS)) {
             return;
         }
@@ -116,6 +126,10 @@ final class CampaignSubscriber implements EventSubscriberInterface
 
     public function onCampaignTriggerCondition(CampaignExecutionEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         if (!$event->checkContext(self::CONDITION_COMPANY_SEGMENTS)) {
             return;
         }

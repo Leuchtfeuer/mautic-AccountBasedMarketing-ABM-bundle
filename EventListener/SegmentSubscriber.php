@@ -11,6 +11,7 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentM
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Blocks deleting a contact segment that is referenced by company segment
@@ -19,6 +20,7 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 final class SegmentSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private readonly Config $config,
         private readonly TranslatorInterface $translator,
         private readonly CompanySegmentModel $companySegmentModel,
         private readonly RequestStack $requestStack,
@@ -35,6 +37,10 @@ final class SegmentSubscriber implements EventSubscriberInterface
 
     public function onSegmentPreDelete(SegmentEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $leadList = $event->getList();
 
         $companySegments = $this->companySegmentModel->getCompanySegmentsUsingContactSegment($leadList->getId());

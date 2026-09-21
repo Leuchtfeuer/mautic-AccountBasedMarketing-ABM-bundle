@@ -15,6 +15,7 @@ use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Evaluates company_segments filters in email dynamic content.
@@ -29,6 +30,7 @@ final class EmailDynamicContentSubscriber implements EventSubscriberInterface
     use MatchFilterForLeadTrait;
 
     public function __construct(
+        private readonly Config $config,
         private readonly SegmentCompanyRepository $companySegmentRepository,
         private readonly PrimaryCompanyHelper $primaryCompanyHelper,
         private readonly EventDispatcherInterface $dispatcher,
@@ -45,6 +47,10 @@ final class EmailDynamicContentSubscriber implements EventSubscriberInterface
 
     public function onTokenReplacement(TokenReplacementEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $clickthrough = $event->getClickthrough();
         if (!isset($clickthrough['dynamicContent']) || !is_array($clickthrough['dynamicContent'])) {
             return;

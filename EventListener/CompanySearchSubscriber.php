@@ -14,10 +14,12 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 final class CompanySearchSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private Config $config,
         private TranslatorInterface $translator,
         private CompanyRepository $companyRepository,
         private Connection $connection,
@@ -36,6 +38,10 @@ final class CompanySearchSubscriber implements EventSubscriberInterface
 
     public function onBuildSearch(CompanyBuildSearchEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $searchCommand = $this->translator->trans('mautic.company_segments.searchcommand.list');
         if ($event->getCommand() !== $searchCommand) {
             return;
@@ -44,6 +50,13 @@ final class CompanySearchSubscriber implements EventSubscriberInterface
         $companySegmentIds = $this->getCompanySegmentIdsByAlias($event->getString());
 
         if ([] === $companySegmentIds) {
+            // Unknown segment alias: mark the search as handled, otherwise the
+            // core falls back to a "comp.companysegment" column filter (SQL error).
+            $event->setStrict(true);
+            $event->setReturnParameters(false);
+            $event->setSubQuery($event->isNegation() ? '1 = 1' : '0 = 1');
+            $event->setSearchStatus(true);
+
             return;
         }
 

@@ -6,6 +6,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\Exten
 
 use Mautic\CoreBundle\Form\Type\DynamicContentFilterEntryFiltersType;
 use Mautic\DynamicContentBundle\Form\Type\DwcEntryFiltersType;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\AbstractTypeExtension;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -22,6 +23,7 @@ final class DwcEntryFiltersTypeExtension extends AbstractTypeExtension
     private ?array $companySegmentChoices = null;
 
     public function __construct(
+        private readonly Config $config,
         private readonly CompanySegmentModel $companySegmentModel,
     ) {
     }
@@ -35,7 +37,7 @@ final class DwcEntryFiltersTypeExtension extends AbstractTypeExtension
 
     public function configureOptions(OptionsResolver $resolver): void
     {
-        $resolver->setDefault('companySegments', $this->getCompanySegmentChoices());
+        $resolver->setDefault('companySegments', $this->config->isPublished() ? $this->getCompanySegmentChoices() : []);
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -43,6 +45,10 @@ final class DwcEntryFiltersTypeExtension extends AbstractTypeExtension
         // Extension listeners run after the type listeners, so this replaces
         // the filter child built by the core FilterTrait.
         $formModifier = function (FormEvent $event, string $eventName): void {
+            if (!$this->config->isPublished()) {
+                return;
+            }
+
             $data = $event->getData();
             $form = $event->getForm();
 

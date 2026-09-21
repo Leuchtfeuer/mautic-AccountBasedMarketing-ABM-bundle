@@ -8,10 +8,12 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentP
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 final class CompanySegmentSubscriber implements EventSubscriberInterface
 {
     public function __construct(
+        private Config $config,
         private CompanySegmentModel $companySegmentModel,
         private TranslatorInterface $translator,
     ) {
@@ -26,6 +28,10 @@ final class CompanySegmentSubscriber implements EventSubscriberInterface
 
     public function onCompanySegmentPreDelete(CompanySegmentPreDelete $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $companySegment = $event->getCompanySegment();
         $id             = $companySegment->getId();
 

@@ -18,6 +18,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Plugin counterpart of the core TypeOperatorSubscriber additions from
@@ -31,6 +32,7 @@ class TypeOperatorSubscriber implements EventSubscriberInterface
     use SegmentFilterIconTrait;
 
     public function __construct(
+        private Config $config,
         private CompanySegmentModel $companySegmentModel,
         private FieldChoicesProviderInterface $fieldChoicesProvider,
         private TypeOperatorProviderInterface $typeOperatorProvider,
@@ -58,6 +60,10 @@ class TypeOperatorSubscriber implements EventSubscriberInterface
 
     public function onTypeListCollect(ListFieldChoicesEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $event->setChoicesForFieldAlias(CompanySegmentModel::PROPERTIES_FIELD, $this->getCompanySegmentChoices());
     }
 
@@ -68,6 +74,10 @@ class TypeOperatorSubscriber implements EventSubscriberInterface
      */
     public function onSegmentFilterFormHandleCompanySegments(FormAdjustmentEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         if (!$event->fieldTypeIsOneOf(CompanySegmentModel::PROPERTIES_FIELD)) {
             return;
         }
@@ -117,6 +127,10 @@ class TypeOperatorSubscriber implements EventSubscriberInterface
 
     public function onCompanySegmentFiltersAddStaticFields(CompanySegmentFiltersChoicesEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         $this->addIncludeExcludeOperatorsToTextFilters($event);
 
         // Static company fields (date_added, date_modified)
@@ -166,6 +180,10 @@ class TypeOperatorSubscriber implements EventSubscriberInterface
 
     public function onLeadSegmentFiltersAddCompanySegments(LeadListFiltersChoicesEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         // Only add the company_segments filter - other company fields are already handled by Core
         $companySegmentFieldOptions = [
             'label'      => $this->translator->trans('mautic.company_segments.filter.lists'),
