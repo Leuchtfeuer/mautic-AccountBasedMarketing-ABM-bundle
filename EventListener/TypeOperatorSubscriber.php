@@ -13,12 +13,12 @@ use Mautic\LeadBundle\Provider\TypeOperatorProviderInterface;
 use Mautic\LeadBundle\Segment\OperatorOptions;
 use Mautic\LeadBundle\Segment\SegmentFilterIconTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentFiltersChoicesEvent;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Plugin counterpart of the core TypeOperatorSubscriber additions from

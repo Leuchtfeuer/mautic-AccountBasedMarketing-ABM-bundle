@@ -13,9 +13,9 @@ use Mautic\LeadBundle\Entity\LeadListRepository;
 use Mautic\LeadBundle\Helper\PrimaryCompanyHelper;
 use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Evaluates company_segments filters in email dynamic content.
@@ -177,7 +177,7 @@ final class EmailDynamicContentSubscriber implements EventSubscriberInterface
             $filterValue = [$filterValue];
         }
 
-        $segmentIds = array_map('intval', array_filter($filterValue));
+        $segmentIds = array_map(intval(...), array_filter($filterValue));
         $contactId  = (int) $lead['id'];
 
         return match ($operator) {

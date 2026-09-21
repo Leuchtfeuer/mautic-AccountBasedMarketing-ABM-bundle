@@ -14,7 +14,7 @@ class LeuchtfeuerAccountBasedMarketingAbmIntegration extends BasicIntegration im
 
     // Must match the filename-derived name that the PluginBundle scan stores
     // in plugin_integration_settings, otherwise two rows can exist in parallel.
-    public const NAME = 'LeuchtfeuerAccountBasedMarketingAbm';
+    public const NAME         = 'LeuchtfeuerAccountBasedMarketingAbm';
     public const DISPLAY_NAME = 'ABM (Account Based Marketing) by Leuchtfeuer';
 
     public function getName(): string

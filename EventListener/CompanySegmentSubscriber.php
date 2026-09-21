@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentPreDelete;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
-final class CompanySegmentSubscriber implements EventSubscriberInterface
+final readonly class CompanySegmentSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private Config $config,

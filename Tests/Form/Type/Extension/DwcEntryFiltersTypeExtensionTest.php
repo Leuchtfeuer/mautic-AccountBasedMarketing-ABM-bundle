@@ -18,8 +18,8 @@ final class DwcEntryFiltersTypeExtensionTest extends TestCase
     {
         $extendedTypes = iterator_to_array(DwcEntryFiltersTypeExtension::getExtendedTypes());
 
-        self::assertContains(DwcEntryFiltersType::class, $extendedTypes);
-        self::assertContains(DynamicContentFilterEntryFiltersType::class, $extendedTypes);
+        $this->assertContains(DwcEntryFiltersType::class, $extendedTypes);
+        $this->assertContains(DynamicContentFilterEntryFiltersType::class, $extendedTypes);
     }
 
     public function testConfigureOptionsSetsCompanySegmentsDefault(): void
@@ -28,7 +28,7 @@ final class DwcEntryFiltersTypeExtensionTest extends TestCase
         $config->method('isPublished')->willReturn(true);
 
         $companySegmentModel = $this->createMock(CompanySegmentModel::class);
-        $companySegmentModel->expects(self::once())
+        $companySegmentModel->expects($this->once())
             ->method('getCompanySegments')
             ->willReturn([
                 ['id' => '1', 'name' => 'Segment A'],
@@ -41,13 +41,10 @@ final class DwcEntryFiltersTypeExtensionTest extends TestCase
         $extension->configureOptions($resolver);
         $options = $resolver->resolve();
 
-        self::assertSame(
-            [
-                'Segment A' => 1,
-                'Segment B' => 2,
-            ],
-            $options['companySegments']
-        );
+        $this->assertSame([
+            'Segment A' => 1,
+            'Segment B' => 2,
+        ], $options['companySegments']);
     }
 
     public function testConfigureOptionsSetsEmptyDefaultWhenPluginNotPublished(): void
@@ -56,7 +53,7 @@ final class DwcEntryFiltersTypeExtensionTest extends TestCase
         $config->method('isPublished')->willReturn(false);
 
         $companySegmentModel = $this->createMock(CompanySegmentModel::class);
-        $companySegmentModel->expects(self::never())
+        $companySegmentModel->expects($this->never())
             ->method('getCompanySegments');
 
         $extension = new DwcEntryFiltersTypeExtension($config, $companySegmentModel);
@@ -65,6 +62,6 @@ final class DwcEntryFiltersTypeExtensionTest extends TestCase
         $extension->configureOptions($resolver);
         $options = $resolver->resolve();
 
-        self::assertSame([], $options['companySegments']);
+        $this->assertSame([], $options['companySegments']);
     }
 }

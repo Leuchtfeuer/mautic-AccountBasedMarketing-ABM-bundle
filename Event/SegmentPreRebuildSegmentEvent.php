@@ -17,7 +17,7 @@ final class SegmentPreRebuildSegmentEvent extends CommonEvent
      * @param array<string, int|array<mixed>> $list
      */
     public function __construct(
-        protected array $list,
+        private readonly array $list,
         bool $isNew = false,
     ) {
         $this->isNew = $isNew;

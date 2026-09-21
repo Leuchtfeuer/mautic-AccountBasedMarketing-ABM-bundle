@@ -62,8 +62,7 @@ class CompanySegmentRepository extends CommonRepository
 
     /**
      * @param \Doctrine\ORM\QueryBuilder|\Doctrine\DBAL\Query\QueryBuilder $q
-     *
-     * @phpstan-param mixed $filter
+     * @param mixed                                                        $filter
      *
      * @return array<mixed>
      */
@@ -88,7 +87,6 @@ class CompanySegmentRepository extends CommonRepository
         }
 
         if ($returnParameter) {
-            /** @phpstan-ignore-next-line */
             $string     = ($filter->strict) ? $filter->string : "%{$filter->string}%";
             $parameters = [$unique => $string];
         }

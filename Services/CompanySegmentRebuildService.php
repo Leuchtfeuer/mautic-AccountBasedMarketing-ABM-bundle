@@ -12,11 +12,12 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 /**
  * Service to handle company segment dependency resolution and rebuilding.
  */
-final class CompanySegmentRebuildService
+final readonly class CompanySegmentRebuildService
 {
     public function __construct(
         private CompanySegmentModel $companySegmentModel,
         private TranslatorInterface $translator,
+        private \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository,
     ) {
     }
 
@@ -46,7 +47,7 @@ final class CompanySegmentRebuildService
             $this->companySegmentModel->saveEntity($companySegment);
         }
 
-        $this->companySegmentModel->getRepository()->detachEntity($companySegment);
+        $this->companySegmentRepository->detachEntity($companySegment);
 
         $output->writeln(
             '<comment>'.$this->translator->trans('mautic.company_segments.rebuild.companies_affected', ['%companies%' => $processed]).'</comment>'

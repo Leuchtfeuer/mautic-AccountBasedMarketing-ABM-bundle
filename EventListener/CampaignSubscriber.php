@@ -10,35 +10,34 @@ use Mautic\CampaignBundle\Event\CampaignExecutionEvent;
 use Mautic\CampaignBundle\Event\PendingEvent;
 use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\LeadEvents;
-use Mautic\LeadBundle\Model\CompanyModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CampaignEventCompanySegmentsType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CompanySegmentActionType;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Campaign action "Modify Company Segments" and condition "Company Segments"
  * for the contact's primary company (core PR 16025 added these to the core
  * CampaignSubscriber; keys are plugin-prefixed here).
  */
-final class CampaignSubscriber implements EventSubscriberInterface
+final readonly class CampaignSubscriber implements EventSubscriberInterface
 {
     public const ACTION_CHANGE_COMPANY_SEGMENTS = 'leuchtfeuer.abm.changecompanysegments';
 
     public const CONDITION_COMPANY_SEGMENTS     = 'leuchtfeuer.abm.company_segments';
 
     public function __construct(
-        private readonly Config $config,
-        private readonly CompanyModel $companyModel,
-        private readonly CompanySegmentModel $companySegmentModel,
+        private Config $config,
+        private CompanySegmentModel $companySegmentModel,
+        private \Mautic\LeadBundle\Entity\CompanyRepository $companyRepository,
     ) {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            CampaignEvents::CAMPAIGN_ON_BUILD => ['onCampaignBuild', 0],
+            CampaignEvents::CAMPAIGN_ON_BUILD    => ['onCampaignBuild', 0],
             LeadEvents::ON_CAMPAIGN_BATCH_ACTION => [
                 ['onCampaignTriggerActionChangeCompanySegments', 0],
             ],
@@ -97,7 +96,7 @@ final class CampaignSubscriber implements EventSubscriberInterface
                 continue;
             }
 
-            $companyEntity = $this->companyModel->getRepository()->find($primaryCompany['id']);
+            $companyEntity = $this->companyRepository->find($primaryCompany['id']);
             if (!$companyEntity) {
                 $event->fail($log, 'Company not found');
 
@@ -167,7 +166,7 @@ final class CampaignSubscriber implements EventSubscriberInterface
             return false;
         }
 
-        $company = $this->companyModel->getRepository()->find($primaryCompany['id']);
+        $company = $this->companyRepository->find($primaryCompany['id']);
 
         if (null === $company) {
             return false;

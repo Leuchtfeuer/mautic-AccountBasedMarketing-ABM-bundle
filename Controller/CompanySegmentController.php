@@ -16,14 +16,19 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class CompanySegmentController extends AbstractStandardFormController
 {
+    private \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository;
+
+    #[\Symfony\Contracts\Service\Attribute\Required]
+    public function autowireCompanySegmentController(\MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository): void
+    {
+        $this->companySegmentRepository = $companySegmentRepository;
+    }
     public const SESSION_KEY            = 'company_segments';
 
     private const PERMISSION_EDIT_OTHER = ':editother';
 
     public function indexAction(CompanySegmentModel $model, Request $request, CorePermissions $security, int $page = 1): Response
     {
-        $repository = $model->getRepository();
-
         // set some permissions
         $permissions = $security->isGranted(
             [
@@ -55,7 +60,7 @@ final class CompanySegmentController extends AbstractStandardFormController
         $session->set('mautic.'.$this->getSessionBase().'.filter', $search);
 
         // do some default filtering
-        $orderBy    = $session->get('mautic.'.$this->getSessionBase().'.orderby', $repository->getTableAlias().'.dateModified');
+        $orderBy    = $session->get('mautic.'.$this->getSessionBase().'.orderby', $this->companySegmentRepository->getTableAlias().'.dateModified');
         $orderByDir = $session->get('mautic.'.$this->getSessionBase().'.orderbydir', $this->getDefaultOrderDirection());
 
         $filter = [
@@ -65,8 +70,7 @@ final class CompanySegmentController extends AbstractStandardFormController
         $tmpl = $request->isXmlHttpRequest() ? $request->get('tmpl', 'index') : 'index';
 
         if (!$permissions[$this->getPermissionBase().':viewother']) {
-            $translator      = $this->translator;
-            $mine            = $translator->trans('mautic.core.searchcommand.ismine');
+            $mine            = $this->translator->trans('mautic.core.searchcommand.ismine');
             $filter['force'] = $mine;
         }
 
@@ -124,7 +128,7 @@ final class CompanySegmentController extends AbstractStandardFormController
             'searchValue'     => $search,
             'translationBase' => $this->getTranslationBase(),
             'permissionBase'  => $this->getPermissionBase(),
-            'tableAlias'      => $model->getRepository()->getTableAlias(),
+            'tableAlias'      => $this->companySegmentRepository->getTableAlias(),
         ];
 
         return $this->delegateView(
@@ -286,10 +290,8 @@ final class CompanySegmentController extends AbstractStandardFormController
      * AbstractStandardFormController; the plugin keeps core untouched).
      *
      * @param int $objectId
-     *
-     * @return \Symfony\Component\HttpFoundation\JsonResponse|\Symfony\Component\HttpFoundation\RedirectResponse
      */
-    protected function deleteStandard(Request $request, $objectId)
+    protected function deleteStandard(Request $request, $objectId): Response
     {
         $page      = $request->getSession()->get('mautic.'.$this->getSessionBase().'.page', 1);
         $returnUrl = $this->generateUrl($this->getIndexRoute(), ['page' => $page]);
@@ -338,6 +340,9 @@ final class CompanySegmentController extends AbstractStandardFormController
             }
         } // else don't do anything
 
+        // The parent phpdoc promises JsonResponse|RedirectResponse, but the core
+        // postActionRedirect() is only typed to return Response.
+        // @phpstan-ignore return.type
         return $this->postActionRedirect(
             $this->getPostActionRedirectArguments(
                 array_merge(
@@ -354,10 +359,8 @@ final class CompanySegmentController extends AbstractStandardFormController
     /**
      * Overrides the core method to catch the dependency exception thrown by
      * CompanySegmentModel::deleteEntities() and flash the collected errors.
-     *
-     * @return \Symfony\Component\HttpFoundation\JsonResponse|\Symfony\Component\HttpFoundation\RedirectResponse
      */
-    protected function batchDeleteStandard(Request $request)
+    protected function batchDeleteStandard(Request $request): Response
     {
         $page      = $request->getSession()->get('mautic.'.$this->getSessionBase().'.page', 1);
         $returnUrl = $this->generateUrl($this->getIndexRoute(), ['page' => $page]);
@@ -373,7 +376,8 @@ final class CompanySegmentController extends AbstractStandardFormController
         ];
 
         if ('POST' === $request->getMethod()) {
-            $model     = $this->getModel($this->getModelName());
+            $model = $this->getModel($this->getModelName());
+            \assert($model instanceof CompanySegmentModel);
             $ids       = json_decode($request->query->get('ids', ''));
             $deleteIds = [];
 
@@ -419,6 +423,9 @@ final class CompanySegmentController extends AbstractStandardFormController
             }
         } // else don't do anything
 
+        // The parent phpdoc promises JsonResponse|RedirectResponse, but the core
+        // postActionRedirect() is only typed to return Response.
+        // @phpstan-ignore return.type
         return $this->postActionRedirect(
             $this->getPostActionRedirectArguments(
                 array_merge(
@@ -437,10 +444,8 @@ final class CompanySegmentController extends AbstractStandardFormController
      * the plugin's flash messages live.
      *
      * @param string $string
-     *
-     * @return string
      */
-    protected function getTranslatedString($string)
+    protected function getTranslatedString($string): string
     {
         return $this->translator->hasId($this->getTranslationBase().'.'.$string, 'flashes') ? $this->getTranslationBase()
             .'.'.$string : 'mautic.core.'.$string;

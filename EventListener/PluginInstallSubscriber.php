@@ -19,7 +19,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  * core skips schema creation entirely, so this subscriber renames the legacy
  * xref table and creates whatever is missing.
  */
-final class PluginInstallSubscriber implements EventSubscriberInterface
+final readonly class PluginInstallSubscriber implements EventSubscriberInterface
 {
     private const PLUGIN_NAME = 'ABM (Account Based Marketing) by Leuchtfeuer';
 
@@ -28,7 +28,7 @@ final class PluginInstallSubscriber implements EventSubscriberInterface
     private string $prefix;
 
     public function __construct(
-        private readonly Connection $connection,
+        private Connection $connection,
         #[Autowire(env: 'MAUTIC_TABLE_PREFIX')]
         ?string $tablePrefix,
     ) {
@@ -124,7 +124,7 @@ final class PluginInstallSubscriber implements EventSubscriberInterface
         $categoryFk = $this->generatePropertyName(CompanySegment::TABLE_NAME, 'fk', ['category_id']);
 
         foreach ($this->connection->createSchemaManager()->listTableForeignKeys($segmentsTable) as $foreignKey) {
-            if (['category_id'] === array_map('strtolower', $foreignKey->getLocalColumns())) {
+            if (['category_id'] === array_map(strtolower(...), $foreignKey->getLocalColumns())) {
                 return;
             }
         }

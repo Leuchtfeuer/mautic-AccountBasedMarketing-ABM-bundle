@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\Controller;
 
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use Mautic\UserBundle\Entity\User;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 
 final class CompanySegmentControllerTest extends MauticMysqlTestCase
 {
@@ -43,8 +43,8 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $response = $this->client->getResponse();
 
         $this->assertResponseIsSuccessful('Company segments index should return 200.');
-        $this->assertStringContainsString('First Segment', $response->getContent());
-        $this->assertStringContainsString('Second Segment', $response->getContent());
+        $this->assertStringContainsString('First Segment', (string) $response->getContent());
+        $this->assertStringContainsString('Second Segment', (string) $response->getContent());
     }
 
     public function testIndexActionWithFiltering(): void
@@ -70,9 +70,9 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $response = $this->client->getResponse();
 
         $this->assertResponseIsSuccessful('Company segments index should return 200.');
-        $this->assertStringContainsString('February 7, 2020', $response->getContent());
-        $this->assertStringContainsString('March 21, 2020', $response->getContent());
-        $this->assertStringContainsString('Test User', $response->getContent());
+        $this->assertStringContainsString('February 7, 2020', (string) $response->getContent());
+        $this->assertStringContainsString('March 21, 2020', (string) $response->getContent());
+        $this->assertStringContainsString('Test User', (string) $response->getContent());
     }
 
     private function createCompanySegment(string $name, ?string $aliasSuffix = null): CompanySegment
@@ -95,8 +95,8 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $response = $this->client->getResponse();
 
         $this->assertResponseIsSuccessful('New company segment form should return 200.');
-        $this->assertStringContainsString('New company segment', $response->getContent());
-        $this->assertStringContainsString('company_segments[name]', $response->getContent());
+        $this->assertStringContainsString('New company segment', (string) $response->getContent());
+        $this->assertStringContainsString('company_segments[name]', (string) $response->getContent());
     }
 
     public function testNewActionCreatesSegment(): void
@@ -140,8 +140,8 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $response = $this->client->getResponse();
 
         $this->assertResponseIsSuccessful('Edit company segment form should return 200.');
-        $this->assertStringContainsString('Edit company segment - Edit Test Segment', $response->getContent());
-        $this->assertStringContainsString('value="Edit Test Segment"', $response->getContent());
+        $this->assertStringContainsString('Edit company segment - Edit Test Segment', (string) $response->getContent());
+        $this->assertStringContainsString('value="Edit Test Segment"', (string) $response->getContent());
     }
 
     public function testEditActionUpdatesSegment(): void
@@ -190,8 +190,8 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $response = $this->client->getResponse();
 
         $this->assertResponseIsSuccessful('View company segment should return 200.');
-        $this->assertStringContainsString('View Test Segment', $response->getContent());
-        $this->assertStringContainsString('This is a test segment for viewing', $response->getContent());
+        $this->assertStringContainsString('View Test Segment', (string) $response->getContent());
+        $this->assertStringContainsString('This is a test segment for viewing', (string) $response->getContent());
     }
 
     public function testEditActionReturnsErrorForNonExistentSegment(): void
@@ -265,7 +265,7 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         // Verify segment was deleted from database
         $this->em->clear();
         $deletedSegment = $this->em->getRepository(CompanySegment::class)->find($segmentId);
-        $this->assertNull($deletedSegment, 'Segment should be deleted from database');
+        $this->assertNotInstanceOf(CompanySegment::class, $deletedSegment, 'Segment should be deleted from database');
     }
 
     public function testDeleteActionReturnsErrorForNonExistentSegment(): void
@@ -306,9 +306,9 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
 
         // Verify all segments were deleted
         $this->em->clear();
-        $this->assertNull($this->em->getRepository(CompanySegment::class)->find($id1));
-        $this->assertNull($this->em->getRepository(CompanySegment::class)->find($id2));
-        $this->assertNull($this->em->getRepository(CompanySegment::class)->find($id3));
+        $this->assertNotInstanceOf(CompanySegment::class, $this->em->getRepository(CompanySegment::class)->find($id1));
+        $this->assertNotInstanceOf(CompanySegment::class, $this->em->getRepository(CompanySegment::class)->find($id2));
+        $this->assertNotInstanceOf(CompanySegment::class, $this->em->getRepository(CompanySegment::class)->find($id3));
     }
 
     public function testCloneActionCreatesNewSegment(): void
@@ -462,13 +462,13 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         // Base segment should still exist (has dependency)
         $this->assertInstanceOf(CompanySegment::class, $base);
         // Independent segment should be deleted
-        $this->assertNull($independent);
+        $this->assertNotInstanceOf(CompanySegment::class, $independent);
     }
 
     private function loginAdminUser(): void
     {
         $user = $this->em->getRepository(User::class)->findOneBy(['username' => 'admin']);
-        \assert($user instanceof User);
+        $this->assertInstanceOf(User::class, $user);
         $this->loginUser($user);
     }
 }

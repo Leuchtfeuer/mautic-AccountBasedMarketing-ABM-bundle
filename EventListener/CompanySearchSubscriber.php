@@ -12,11 +12,11 @@ use Mautic\LeadBundle\LeadEvents;
 use Mautic\LeadBundle\Segment\Query\QueryBuilder;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
-final class CompanySearchSubscriber implements EventSubscriberInterface
+final readonly class CompanySearchSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private Config $config,
@@ -112,6 +112,6 @@ final class CompanySearchSubscriber implements EventSubscriberInterface
             ->executeQuery()
             ->fetchFirstColumn();
 
-        return array_map('intval', $result);
+        return array_map(intval(...), $result);
     }
 }

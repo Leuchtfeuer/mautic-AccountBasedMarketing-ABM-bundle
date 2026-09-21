@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event;
 
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use Mautic\LeadBundle\Segment\Query\QueryBuilder;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use Symfony\Contracts\EventDispatcher\Event;
 
 final class CompanySegmentQueryBuilderGeneratedEvent extends Event
 {
     public function __construct(
-        private CompanySegment $companySegment,
-        private QueryBuilder $queryBuilder,
+        private readonly CompanySegment $companySegment,
+        private readonly QueryBuilder $queryBuilder,
     ) {
     }
 

@@ -25,7 +25,7 @@ final class CompanySearchFunctionalTest extends MauticMysqlTestCase
 
         $companyInSegment1   = $this->createCompany('Company A', 'a@example.com');
         $companyInSegment2   = $this->createCompany('Company B', 'b@example.com');
-        $companyNotInSegment = $this->createCompany('Company C', 'c@example.com');
+        $this->createCompany('Company C', 'c@example.com');
 
         $this->addCompanyToCompanySegment($companyInSegment1, $segment);
         $this->addCompanyToCompanySegment($companyInSegment2, $segment);
@@ -59,6 +59,6 @@ final class CompanySearchFunctionalTest extends MauticMysqlTestCase
         $this->assertResponseIsSuccessful();
 
         $content = $this->client->getResponse()->getContent();
-        $this->assertStringContainsString('No Results Found', $content);
+        $this->assertStringContainsString('No Results Found', (string) $content);
     }
 }

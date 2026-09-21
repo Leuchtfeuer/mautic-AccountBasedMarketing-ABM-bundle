@@ -34,6 +34,7 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
         private readonly TranslatorInterface $translator,
         PathsHelper $pathsHelper,
         CoreParametersHelper $coreParametersHelper,
+        private readonly \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository,
     ) {
         parent::__construct($pathsHelper, $coreParametersHelper);
     }
@@ -180,7 +181,7 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
                 'force' => [
                     [
                         'expr'   => 'notIn',
-                        'column' => $this->companySegmentModel->getRepository()->getTableAlias().'.id',
+                        'column' => $this->companySegmentRepository->getTableAlias().'.id',
                         'value'  => $excludeSegments,
                     ],
                 ],

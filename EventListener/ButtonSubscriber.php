@@ -8,21 +8,21 @@ use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomButtonEvent;
 use Mautic\CoreBundle\Security\Permissions\CorePermissions;
 use Mautic\CoreBundle\Twig\Helper\ButtonHelper;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Routing\RouterInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Adds the "Change company segments" bulk action button to the companies list.
  */
-final class ButtonSubscriber implements EventSubscriberInterface
+final readonly class ButtonSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly Config $config,
-        private readonly TranslatorInterface $translator,
-        private readonly RouterInterface $router,
-        private readonly CorePermissions $security,
+        private Config $config,
+        private TranslatorInterface $translator,
+        private RouterInterface $router,
+        private CorePermissions $security,
     ) {
     }
 

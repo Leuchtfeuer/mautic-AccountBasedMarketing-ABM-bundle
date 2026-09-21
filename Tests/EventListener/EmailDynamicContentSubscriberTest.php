@@ -23,7 +23,6 @@ final class EmailDynamicContentSubscriberTest extends TestCase
     private SegmentCompanyRepository&MockObject $companySegmentRepository;
     private PrimaryCompanyHelper&MockObject $primaryCompanyHelper;
     private EventDispatcherInterface&MockObject $dispatcher;
-    private LeadListRepository&MockObject $segmentRepository;
     private EmailDynamicContentSubscriber $subscriber;
 
     protected function setUp(): void
@@ -32,38 +31,35 @@ final class EmailDynamicContentSubscriberTest extends TestCase
         $this->companySegmentRepository = $this->createMock(SegmentCompanyRepository::class);
         $this->primaryCompanyHelper     = $this->createMock(PrimaryCompanyHelper::class);
         $this->dispatcher               = $this->createMock(EventDispatcherInterface::class);
-        $this->segmentRepository        = $this->getMockBuilder(LeadListRepository::class)
-            ->disableOriginalConstructor()
-            ->getMock();
 
         $this->subscriber = new EmailDynamicContentSubscriber(
             $this->config,
             $this->companySegmentRepository,
             $this->primaryCompanyHelper,
             $this->dispatcher,
-            $this->segmentRepository,
+            $this->createStub(LeadListRepository::class),
         );
     }
 
     public function testDoesNothingWhenPluginNotPublished(): void
     {
         $this->config->method('isPublished')->willReturn(false);
-        $this->dispatcher->expects(self::never())->method('dispatch');
+        $this->dispatcher->expects($this->never())->method('dispatch');
 
         $event = $this->makeEvent(['id' => 1, 'email' => 'a@b.com'], $this->makeDcClickthrough('token1', 'in', [1]));
         $this->subscriber->onTokenReplacement($event);
 
         $remaining = $event->getClickthrough()['dynamicContent'];
         \assert(is_array($remaining));
-        self::assertCount(1, $remaining);
+        $this->assertCount(1, $remaining);
     }
 
     public function testDoesNothingWhenNoDynamicContent(): void
     {
         $this->config->method('isPublished')->willReturn(true);
-        $this->dispatcher->expects(self::never())->method('dispatch');
+        $this->dispatcher->expects($this->never())->method('dispatch');
 
-        $event = new TokenReplacementEvent(null, ['id' => 1], ['tokens' => []], null);
+        $event = new TokenReplacementEvent(null, ['id' => 1], ['tokens' => []]);
         $this->subscriber->onTokenReplacement($event);
     }
 
@@ -71,7 +67,7 @@ final class EmailDynamicContentSubscriberTest extends TestCase
     {
         $this->config->method('isPublished')->willReturn(true);
         $this->primaryCompanyHelper->method('mergePrimaryCompanyWithProfileFields')->willReturn(['id' => 1]);
-        $this->dispatcher->expects(self::never())->method('dispatch');
+        $this->dispatcher->expects($this->never())->method('dispatch');
 
         $clickthrough = [
             'tokens'         => [],
@@ -86,13 +82,13 @@ final class EmailDynamicContentSubscriberTest extends TestCase
             ],
         ];
 
-        $event = new TokenReplacementEvent(null, ['id' => 1], $clickthrough, null);
+        $event = new TokenReplacementEvent(null, ['id' => 1], $clickthrough);
         $this->subscriber->onTokenReplacement($event);
 
         // Item must remain in clickthrough so the core TokenSubscriber handles it
         $remaining = $event->getClickthrough()['dynamicContent'];
         \assert(is_array($remaining));
-        self::assertCount(1, $remaining);
+        $this->assertCount(1, $remaining);
     }
 
     public function testHandlesCompanySegmentsItemAndRemovesFromClickthrough(): void
@@ -104,15 +100,15 @@ final class EmailDynamicContentSubscriberTest extends TestCase
 
         $this->companySegmentRepository->method('isContactPrimaryCompanyInSegments')->with(10, [5])->willReturn(true);
 
-        $this->dispatcher->expects(self::once())->method('dispatch')
+        $this->dispatcher->expects($this->once())->method('dispatch')
             ->with(self::isInstanceOf(EmailSendEvent::class), EmailEvents::EMAIL_ON_DISPLAY)
             ->willReturnArgument(0);
 
         $event = $this->makeEvent($lead, $this->makeDcClickthrough('myToken', 'in', [5], 'matched content', 'default'));
         $this->subscriber->onTokenReplacement($event);
 
-        self::assertSame('matched content', $event->getTokens()['{dynamiccontent="myToken"}']);
-        self::assertEmpty($event->getClickthrough()['dynamicContent']);
+        $this->assertSame('matched content', $event->getTokens()['{dynamiccontent="myToken"}']);
+        $this->assertEmpty($event->getClickthrough()['dynamicContent']);
     }
 
     public function testUsesDefaultContentWhenFilterDoesNotMatch(): void
@@ -129,14 +125,14 @@ final class EmailDynamicContentSubscriberTest extends TestCase
         $event = $this->makeEvent($lead, $this->makeDcClickthrough('myToken', 'in', [5], 'matched content', 'default'));
         $this->subscriber->onTokenReplacement($event);
 
-        self::assertSame('default', $event->getTokens()['{dynamiccontent="myToken"}']);
+        $this->assertSame('default', $event->getTokens()['{dynamiccontent="myToken"}']);
     }
 
     public function testUsesLeadEntityViaGetProfileFields(): void
     {
         $this->config->method('isPublished')->willReturn(true);
 
-        $lead      = $this->createMock(Lead::class);
+        $lead      = $this->createStub(Lead::class);
         $leadArray = ['id' => 7, 'email' => 'x@y.com'];
         $this->primaryCompanyHelper->method('getProfileFieldsWithPrimaryCompany')->with($lead)->willReturn($leadArray);
 
@@ -144,10 +140,10 @@ final class EmailDynamicContentSubscriberTest extends TestCase
         $this->dispatcher->method('dispatch')->willReturnArgument(0);
 
         $clickthrough = array_merge($this->makeDcClickthrough('t', 'in', [1]), ['tokens' => []]);
-        $event        = new TokenReplacementEvent(null, $lead, $clickthrough, null);
+        $event        = new TokenReplacementEvent(null, $lead, $clickthrough);
         $this->subscriber->onTokenReplacement($event);
 
-        self::assertArrayHasKey('{dynamiccontent="t"}', $event->getTokens());
+        $this->assertArrayHasKey('{dynamiccontent="t"}', $event->getTokens());
     }
 
     public function testNoPrimaryCompanyWithEmptyOperatorMatches(): void
@@ -164,7 +160,7 @@ final class EmailDynamicContentSubscriberTest extends TestCase
         $event = $this->makeEvent($lead, $this->makeDcClickthrough('t', 'empty', [], 'matched', 'default'));
         $this->subscriber->onTokenReplacement($event);
 
-        self::assertSame('matched', $event->getTokens()['{dynamiccontent="t"}']);
+        $this->assertSame('matched', $event->getTokens()['{dynamiccontent="t"}']);
     }
 
     /** AND-glue: first condition passes but second fails → show default. */
@@ -196,7 +192,7 @@ final class EmailDynamicContentSubscriberTest extends TestCase
         $event = $this->makeEvent($lead, $clickthrough);
         $this->subscriber->onTokenReplacement($event);
 
-        self::assertSame('default', $event->getTokens()['{dynamiccontent="t"}']);
+        $this->assertSame('default', $event->getTokens()['{dynamiccontent="t"}']);
     }
 
     /** OR-glue: first condition fails, second OR-condition passes → show variant. */
@@ -228,7 +224,7 @@ final class EmailDynamicContentSubscriberTest extends TestCase
         $event = $this->makeEvent($lead, $clickthrough);
         $this->subscriber->onTokenReplacement($event);
 
-        self::assertSame('matched', $event->getTokens()['{dynamiccontent="t"}']);
+        $this->assertSame('matched', $event->getTokens()['{dynamiccontent="t"}']);
     }
 
     /**
@@ -237,7 +233,7 @@ final class EmailDynamicContentSubscriberTest extends TestCase
      */
     private function makeEvent(array $lead, array $clickthrough): TokenReplacementEvent
     {
-        return new TokenReplacementEvent(null, $lead, $clickthrough, null);
+        return new TokenReplacementEvent(null, $lead, $clickthrough);
     }
 
     /**

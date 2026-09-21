@@ -13,8 +13,8 @@ use Mautic\LeadBundle\Provider\FieldChoicesProviderInterface;
 use Mautic\LeadBundle\Provider\TypeOperatorProviderInterface;
 use Mautic\LeadBundle\Segment\SegmentFilterIconTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentFiltersChoicesEvent;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
  * Provides listable published company custom fields as filter choices for the

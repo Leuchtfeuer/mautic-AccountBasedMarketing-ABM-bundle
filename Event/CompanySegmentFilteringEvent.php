@@ -10,19 +10,17 @@ use Symfony\Contracts\EventDispatcher\Event;
 
 final class CompanySegmentFilteringEvent extends Event
 {
-    private bool $isFilteringDone;
+    private bool $isFilteringDone = false;
 
-    private string $subQuery;
+    private string $subQuery = '';
 
-    private string $companiesTableAlias;
+    private readonly string $companiesTableAlias;
 
     public function __construct(
         private ContactSegmentFilterCrate $details,
-        private string $alias,
-        private QueryBuilder $queryBuilder,
+        private readonly string $alias,
+        private readonly QueryBuilder $queryBuilder,
     ) {
-        $this->isFilteringDone = false;
-        $this->subQuery        = '';
         $preTableName          = '';
         if (is_string(MAUTIC_TABLE_PREFIX)) {
             $preTableName = MAUTIC_TABLE_PREFIX;

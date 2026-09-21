@@ -8,11 +8,12 @@ use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\DynamicContentBundle\Entity\DynamicContent;
 use Mautic\LeadBundle\Entity\Company;
 use Mautic\LeadBundle\Entity\Lead;
+use Mautic\LeadBundle\Tracker\ContactTracker;
 use Mautic\PageBundle\Entity\Page;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\HttpFoundation\Request;
 
-class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
+final class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 {
     use CreateCompanySegmentTestEntitiesTrait;
 
@@ -34,7 +35,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $lead = $this->createLead('john@acme.com', 'John');
         $this->addLeadToCompany($lead, $company, true);
 
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -59,7 +60,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('VIP Content', $response->getContent());
+        $this->assertStringContainsString('VIP Content', (string) $response->getContent());
     }
 
     public function testLeadDoesNotSeeContentWhenPrimaryCompanyIsNotInSegment(): void
@@ -71,7 +72,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $lead = $this->createLead('jane@regular.com', 'Jane');
         $this->addLeadToCompany($lead, $company, true);
 
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -95,7 +96,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringNotContainsString('VIP Content', $response->getContent());
+        $this->assertStringNotContainsString('VIP Content', (string) $response->getContent());
     }
 
     public function testLeadSeesContentWithNotInOperator(): void
@@ -108,7 +109,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->addLeadToCompany($lead, $company, true);
 
         // Set lead as system contact for this request
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -132,7 +133,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('Non-VIP Content', $response->getContent());
+        $this->assertStringContainsString('Non-VIP Content', (string) $response->getContent());
     }
 
     public function testLeadWithoutPrimaryCompanySeesContentWithEmptyOperator(): void
@@ -140,7 +141,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $lead = $this->createLead('solo@example.com', 'Solo');
 
         // Set lead as system contact for this request
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -164,7 +165,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('No Company Segment Content', $response->getContent());
+        $this->assertStringContainsString('No Company Segment Content', (string) $response->getContent());
     }
 
     public function testLeadWithCompanyInSegmentDoesNotSeeContentWithEmptyOperator(): void
@@ -177,7 +178,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $lead = $this->createLead('john@acme.com', 'John');
         $this->addLeadToCompany($lead, $company, true);
 
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -201,7 +202,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringNotContainsString('No Company Segment Content', $response->getContent());
+        $this->assertStringNotContainsString('No Company Segment Content', (string) $response->getContent());
     }
 
     public function testLeadWithCompanyInSegmentSeesContentWithNotEmptyOperator(): void
@@ -215,7 +216,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->addLeadToCompany($lead, $company, true);
 
         // Set lead as system contact for this request
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -239,14 +240,14 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('Has Company Segment Content', $response->getContent());
+        $this->assertStringContainsString('Has Company Segment Content', (string) $response->getContent());
     }
 
     public function testLeadWithoutPrimaryCompanyDoesNotSeeContentWithNotEmptyOperator(): void
     {
         $lead = $this->createLead('solo@example.com', 'Solo');
 
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -270,7 +271,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringNotContainsString('Has Company Segment Content', $response->getContent());
+        $this->assertStringNotContainsString('Has Company Segment Content', (string) $response->getContent());
     }
 
     public function testLeadWithCompanyInMultipleSegments(): void
@@ -285,7 +286,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $lead = $this->createLead('premium@corp.com', 'Premium');
         $this->addLeadToCompany($lead, $company, true);
 
-        $contactTracker = self::getContainer()->get('mautic.tracker.contact');
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
         $contactTracker->setSystemContact($lead);
 
         $filters = [
@@ -309,7 +310,7 @@ class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('Premium Content', $response->getContent());
+        $this->assertStringContainsString('Premium Content', (string) $response->getContent());
     }
 
     /**

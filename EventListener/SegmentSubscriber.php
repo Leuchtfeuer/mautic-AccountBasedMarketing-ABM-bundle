@@ -7,24 +7,24 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 use Mautic\CoreBundle\Service\FlashBag;
 use Mautic\LeadBundle\Event\LeadListEvent as SegmentEvent;
 use Mautic\LeadBundle\LeadEvents;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 
 /**
  * Blocks deleting a contact segment that is referenced by company segment
  * filters (core PR 16025 added this check to the core SegmentSubscriber).
  */
-final class SegmentSubscriber implements EventSubscriberInterface
+final readonly class SegmentSubscriber implements EventSubscriberInterface
 {
     public function __construct(
-        private readonly Config $config,
-        private readonly TranslatorInterface $translator,
-        private readonly CompanySegmentModel $companySegmentModel,
-        private readonly RequestStack $requestStack,
-        private readonly FlashBag $flashBag,
+        private Config $config,
+        private TranslatorInterface $translator,
+        private CompanySegmentModel $companySegmentModel,
+        private RequestStack $requestStack,
+        private FlashBag $flashBag,
     ) {
     }
 
@@ -45,19 +45,20 @@ final class SegmentSubscriber implements EventSubscriberInterface
 
         $companySegments = $this->companySegmentModel->getCompanySegmentsUsingContactSegment($leadList->getId());
         if (count($companySegments)) {
+            $messageVars = [
+                '%segments%'     => implode(', ', $companySegments),
+                '%segmentNames%' => $leadList->getName(),
+            ];
             $message = $this->translator->trans(
                 'mautic.lead_list.is_in_use.delete.company_segments',
-                [
-                    '%segments%'     => implode(', ', $companySegments),
-                    '%segmentNames%' => $leadList->getName(),
-                ],
+                $messageVars,
                 'validators');
             $event->addDependencyError($message);
 
             // On batch delete the core ListModel discards the dependency error
             // texts and shows only a generic message, so flash the details here.
             if ($this->isSegmentBatchDeleteRequest()) {
-                $this->flashBag->add($message, [], FlashBag::LEVEL_ERROR, false);
+                $this->flashBag->add('mautic.lead_list.is_in_use.delete.company_segments', $messageVars, FlashBag::LEVEL_ERROR, 'validators');
             }
         }
     }

@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Services;
 
 use Doctrine\DBAL\ParameterType;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
 use Mautic\LeadBundle\Entity\LeadList;
 use Mautic\LeadBundle\Segment\ContactSegmentFilterFactory;
 use Mautic\LeadBundle\Segment\ContactSegmentFilters;
 use Mautic\LeadBundle\Segment\Exception\SegmentQueryException;
+use Mautic\LeadBundle\Segment\Query\QueryBuilder;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Segment\Query\CompanyBatchLimiterTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Segment\Query\CompanySegmentQueryBuilder;
-use Mautic\LeadBundle\Segment\Query\QueryBuilder;
 use Psr\Log\LoggerInterface;
 
 final class CompanySegmentService

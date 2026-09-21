@@ -29,7 +29,7 @@ class SegmentCompanyRepository extends CommonRepository
             $q          = $this->forceUseIndex($q, $this->getPreTable().'companies_segment_manually_removed');
             $expression = $q->expr()->eq(SegmentCompany::RELATIONS_NAME.'.segment_id', (string) $segmentIds[0]);
         } else {
-            $expression = $q->expr()->in(SegmentCompany::RELATIONS_NAME.'.segment_id', array_map(static fn ($segmentId): string => (string) $segmentId, $segmentIds));
+            $expression = $q->expr()->in(SegmentCompany::RELATIONS_NAME.'.segment_id', array_map(static fn (int $segmentId): string => (string) $segmentId, $segmentIds));
         }
 
         $q->where($expression);
@@ -132,7 +132,7 @@ class SegmentCompanyRepository extends CommonRepository
     {
         $segmentIds = $this->fetchContactPrimaryCompanyToSegmentIdsRelationships($contactId, $expectedSegmentIds);
 
-        return !empty($segmentIds);
+        return [] !== $segmentIds;
     }
 
     /**
@@ -142,7 +142,7 @@ class SegmentCompanyRepository extends CommonRepository
     {
         $segmentIds = $this->fetchContactPrimaryCompanyToSegmentIdsRelationships($contactId, $expectedSegmentIds);
 
-        if (empty($segmentIds)) {
+        if ([] === $segmentIds) {
             return true; // Contact's primary company is not in any segment
         }
 

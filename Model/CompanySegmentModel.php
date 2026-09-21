@@ -18,13 +18,14 @@ use Mautic\CoreBundle\Security\Permissions\CorePermissions;
 use Mautic\CoreBundle\Translation\Translator;
 use Mautic\LeadBundle\Entity\Company;
 use Mautic\LeadBundle\Entity\CompanyRepository;
+use Mautic\LeadBundle\Entity\LeadList;
+use Mautic\LeadBundle\Model\ListModel;
+use Mautic\LeadBundle\Provider\TypeOperatorProviderInterface;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
-use Mautic\LeadBundle\Entity\LeadList;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentChangeEvent;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Exception\DeleteCompanySegmentsDependencyException;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentFiltersChoicesEvent;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentPostDelete;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentPostSave;
@@ -34,10 +35,9 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentP
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentRebuildAddEvent;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanySegmentRebuildRemoveEvent;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\SegmentPreRebuildSegmentEvent;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Exception\DeleteCompanySegmentsDependencyException;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CompanySegmentType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Helper\CompanySegmentCountCacheHelper;
-use Mautic\LeadBundle\Model\ListModel;
-use Mautic\LeadBundle\Provider\TypeOperatorProviderInterface;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Services\CompanySegmentService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -65,12 +65,15 @@ class CompanySegmentModel extends FormModel
     private array $choiceFieldsCache = [];
 
     public function __construct(
-        private CompanySegmentCountCacheHelper $companySegmentCountCacheHelper,
-        private RequestStack $requestStack,
-        private CompanySegmentService $companySegmentService,
-        private ListModel $listModel,
-        private Connection $connection,
-        private TypeOperatorProviderInterface $typeOperatorProvider,
+        private readonly CompanySegmentCountCacheHelper $companySegmentCountCacheHelper,
+        private readonly RequestStack $requestStack,
+        private readonly CompanySegmentService $companySegmentService,
+        private readonly ListModel $listModel,
+        private readonly Connection $connection,
+        private readonly TypeOperatorProviderInterface $typeOperatorProvider,
+        private readonly CompanySegmentRepository $companySegmentRepository,
+        private readonly SegmentCompanyRepository $segmentCompanyRepository,
+        private readonly CompanyRepository $companyRepository,
         EntityManagerInterface $em,
         CorePermissions $security,
         EventDispatcherInterface $dispatcher,
@@ -79,24 +82,19 @@ class CompanySegmentModel extends FormModel
         UserHelper $userHelper,
         LoggerInterface $mauticLogger,
         CoreParametersHelper $coreParametersHelper,
+        private readonly \Mautic\LeadBundle\Entity\LeadListRepository $leadListRepository,
     ) {
         parent::__construct($em, $security, $dispatcher, $router, $translator, $userHelper, $mauticLogger, $coreParametersHelper);
     }
 
     public function getRepository(): CompanySegmentRepository
     {
-        $repository = $this->em->getRepository(CompanySegment::class);
-        \assert($repository instanceof CompanySegmentRepository);
-
-        return $repository;
+        return $this->companySegmentRepository;
     }
 
     public function getSegmentCompanyRepository(): SegmentCompanyRepository
     {
-        $repository = $this->em->getRepository(SegmentCompany::class);
-        \assert($repository instanceof SegmentCompanyRepository);
-
-        return $repository;
+        return $this->segmentCompanyRepository;
     }
 
     protected function getCacheHelper(): CompanySegmentCountCacheHelper
@@ -534,10 +532,7 @@ class CompanySegmentModel extends FormModel
 
     public function getCompanyRepository(): CompanyRepository
     {
-        $repository = $this->em->getRepository(Company::class);
-        \assert($repository instanceof CompanyRepository);
-
-        return $repository;
+        return $this->companyRepository;
     }
 
     public function rebuildCompanySegment(CompanySegment $companySegment, int $limit = 100, ?int $max = null, ?OutputInterface $output = null): int
@@ -774,7 +769,7 @@ class CompanySegmentModel extends FormModel
     public function getSegmentsWithDependenciesOnSegment(int $segmentId, string $returnProperty = 'name', bool $isContactSegment = false): array
     {
         $tableAlias = $isContactSegment
-            ? $this->listModel->getRepository()->getTableAlias()
+            ? $this->leadListRepository->getTableAlias()
             : $this->getRepository()->getTableAlias();
 
         $filter = [

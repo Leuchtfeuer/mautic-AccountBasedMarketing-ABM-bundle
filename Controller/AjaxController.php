@@ -20,6 +20,14 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final class AjaxController extends CommonAjaxController
 {
+    private \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository;
+
+    #[\Symfony\Contracts\Service\Attribute\Required]
+    public function autowireLeuchtfeuerAccountBasedMarketingAbmAjaxController(\MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository): void
+    {
+        $this->companySegmentRepository = $companySegmentRepository;
+    }
+
     public function loadCompanySegmentFilterFormAction(
         Request $request,
         FormFactoryInterface $formFactory,
@@ -71,7 +79,7 @@ final class AjaxController extends CommonAjaxController
         $id = InputHelper::clean($request->query->get('id'));
         $id = is_numeric($id) ? (int) $id : 0;
 
-        $companyExists = 1 === $companySegmentModel->getRepository()->count(['id' => $id]);
+        $companyExists = 1 === $this->companySegmentRepository->count(['id' => $id]);
 
         if (!$companyExists) {
             return $this->sendJsonResponse(['html' => '0', 'companyCount' => 0], Response::HTTP_NOT_FOUND);

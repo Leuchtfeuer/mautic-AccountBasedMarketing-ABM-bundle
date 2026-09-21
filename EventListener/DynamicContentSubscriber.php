@@ -9,8 +9,8 @@ use Mautic\DynamicContentBundle\Event\ContactFiltersEvaluateEvent;
 use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 final readonly class DynamicContentSubscriber implements EventSubscriberInterface
 {
@@ -51,7 +51,7 @@ final readonly class DynamicContentSubscriber implements EventSubscriberInterfac
      */
     private function isContactPrimaryCompanySegmentRelationshipValid(Lead $contact, string $operator, ?array $segmentIds = null): bool
     {
-        $contactId = (int) $contact->getId();
+        $contactId = $contact->getId();
 
         return match ($operator) {
             OperatorOptions::EMPTY         => $this->companySegmentRepository->isNotContactPrimaryCompanyInAnySegment($contactId),

@@ -20,19 +20,14 @@ final class DynamicContentSubscriberTest extends TestCase
      */
     private MockObject $companySegmentRepository;
 
-    /**
-     * @var MockObject&Config
-     */
-    private MockObject $config;
-
     private DynamicContentSubscriber $subscriber;
 
     protected function setUp(): void
     {
         $this->companySegmentRepository = $this->createMock(SegmentCompanyRepository::class);
-        $this->config                   = $this->createMock(Config::class);
-        $this->config->method('isPublished')->willReturn(true);
-        $this->subscriber = new DynamicContentSubscriber($this->config, $this->companySegmentRepository);
+        $config                         = $this->createMock(Config::class);
+        $config->method('isPublished')->willReturn(true);
+        $this->subscriber = new DynamicContentSubscriber($config, $this->companySegmentRepository);
 
         parent::setUp();
     }
@@ -53,8 +48,8 @@ final class DynamicContentSubscriberTest extends TestCase
         $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId(1));
 
         $subscriber->onContactFilterEvaluate($event);
-        self::assertFalse($event->isEvaluated());
-        self::assertFalse($event->isMatched());
+        $this->assertFalse($event->isEvaluated());
+        $this->assertFalse($event->isMatched());
     }
 
     public function testOnContactFilterEvaluateIgnoresOtherFilterTypes(): void
@@ -69,8 +64,8 @@ final class DynamicContentSubscriberTest extends TestCase
         $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId(1));
 
         $this->subscriber->onContactFilterEvaluate($event);
-        self::assertFalse($event->isEvaluated());
-        self::assertFalse($event->isMatched());
+        $this->assertFalse($event->isEvaluated());
+        $this->assertFalse($event->isMatched());
     }
 
     public function testOnContactFilterEvaluateCompanySegmentsIncludingAny(): void
@@ -87,14 +82,14 @@ final class DynamicContentSubscriberTest extends TestCase
 
         $event = new ContactFiltersEvaluateEvent($filters, $contact);
 
-        $this->companySegmentRepository->expects(self::once())
+        $this->companySegmentRepository->expects($this->once())
             ->method('isContactPrimaryCompanyInSegments')
             ->with($contactId, [1, 2, 3])
             ->willReturn(true);
 
         $this->subscriber->onContactFilterEvaluate($event);
-        self::assertTrue($event->isEvaluated());
-        self::assertTrue($event->isMatched());
+        $this->assertTrue($event->isEvaluated());
+        $this->assertTrue($event->isMatched());
     }
 
     public function testOnContactFilterEvaluateCompanySegmentsExcludingAny(): void
@@ -109,14 +104,14 @@ final class DynamicContentSubscriberTest extends TestCase
         ];
         $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId($contactId));
 
-        $this->companySegmentRepository->expects(self::once())
+        $this->companySegmentRepository->expects($this->once())
             ->method('isNotContactPrimaryCompanyInSegments')
             ->with($contactId, [4])
             ->willReturn(false);
 
         $this->subscriber->onContactFilterEvaluate($event);
-        self::assertTrue($event->isEvaluated());
-        self::assertFalse($event->isMatched());
+        $this->assertTrue($event->isEvaluated());
+        $this->assertFalse($event->isMatched());
     }
 
     public function testOnContactFilterEvaluateCompanySegmentsEmpty(): void
@@ -131,14 +126,14 @@ final class DynamicContentSubscriberTest extends TestCase
         ];
         $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId($contactId));
 
-        $this->companySegmentRepository->expects(self::once())
+        $this->companySegmentRepository->expects($this->once())
             ->method('isNotContactPrimaryCompanyInAnySegment')
             ->with($contactId)
             ->willReturn(true);
 
         $this->subscriber->onContactFilterEvaluate($event);
-        self::assertTrue($event->isEvaluated());
-        self::assertTrue($event->isMatched());
+        $this->assertTrue($event->isEvaluated());
+        $this->assertTrue($event->isMatched());
     }
 
     public function testOnContactFilterEvaluateCompanySegmentsNotEmpty(): void
@@ -153,14 +148,14 @@ final class DynamicContentSubscriberTest extends TestCase
         ];
         $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId($contactId));
 
-        $this->companySegmentRepository->expects(self::once())
+        $this->companySegmentRepository->expects($this->once())
             ->method('isContactPrimaryCompanyInAnySegment')
             ->with($contactId)
             ->willReturn(true);
 
         $this->subscriber->onContactFilterEvaluate($event);
-        self::assertTrue($event->isEvaluated());
-        self::assertTrue($event->isMatched());
+        $this->assertTrue($event->isEvaluated());
+        $this->assertTrue($event->isMatched());
     }
 
     public function testOnContactFilterEvaluateUnexpectedOperatorThrows(): void
