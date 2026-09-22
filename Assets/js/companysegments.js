@@ -101,10 +101,6 @@ Mautic.company_segmentsOnLoad = function(container, response) {
 
     }
 
-    jQuery(document).ajaxComplete(function(){
-        Mautic.ajaxifyForm('daterange');
-    });
-
     Mautic.attachJsUiOnCompanySegmentsFilterForms();
 };
 

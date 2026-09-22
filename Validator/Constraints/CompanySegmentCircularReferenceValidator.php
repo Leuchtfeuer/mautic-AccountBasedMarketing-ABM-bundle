@@ -43,7 +43,10 @@ class CompanySegmentCircularReferenceValidator extends ConstraintValidator
                 $id = null;
             }
             $entity = $this->model->getEntity($id);
-            assert($entity instanceof CompanySegment);
+            if (!$entity instanceof CompanySegment) {
+                // The referenced segment no longer exists; it cannot cause a circular reference.
+                return [];
+            }
 
             return $this->reduceToSegmentIds($entity->getFilters());
         }, $this->reduceToSegmentIds($filters)));

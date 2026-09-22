@@ -6,6 +6,8 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\EventList
 
 use Mautic\DynamicContentBundle\Event\ContactFiltersEvaluateEvent;
 use Mautic\LeadBundle\Entity\Lead;
+use Mautic\LeadBundle\Entity\LeadListRepository;
+use Mautic\LeadBundle\Helper\PrimaryCompanyHelper;
 use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener\DynamicContentSubscriber;
@@ -20,14 +22,27 @@ final class DynamicContentSubscriberTest extends TestCase
      */
     private MockObject $companySegmentRepository;
 
+    /**
+     * @var MockObject&PrimaryCompanyHelper
+     */
+    private MockObject $primaryCompanyHelper;
+
     private DynamicContentSubscriber $subscriber;
 
     protected function setUp(): void
     {
         $this->companySegmentRepository = $this->createMock(SegmentCompanyRepository::class);
-        $config                         = $this->createMock(Config::class);
+        $this->primaryCompanyHelper     = $this->createMock(PrimaryCompanyHelper::class);
+        $this->primaryCompanyHelper->method('getProfileFieldsWithPrimaryCompany')
+            ->willReturnCallback(static fn (Lead $lead): array => ['id' => $lead->getId()]);
+        $config = $this->createMock(Config::class);
         $config->method('isPublished')->willReturn(true);
-        $this->subscriber = new DynamicContentSubscriber($config, $this->companySegmentRepository);
+        $this->subscriber = new DynamicContentSubscriber(
+            $config,
+            $this->companySegmentRepository,
+            $this->primaryCompanyHelper,
+            $this->createStub(LeadListRepository::class)
+        );
 
         parent::setUp();
     }
@@ -36,7 +51,12 @@ final class DynamicContentSubscriberTest extends TestCase
     {
         $config = $this->createMock(Config::class);
         $config->method('isPublished')->willReturn(false);
-        $subscriber = new DynamicContentSubscriber($config, $this->companySegmentRepository);
+        $subscriber = new DynamicContentSubscriber(
+            $config,
+            $this->companySegmentRepository,
+            $this->primaryCompanyHelper,
+            $this->createStub(LeadListRepository::class)
+        );
 
         $filters = [
             [
@@ -156,6 +176,72 @@ final class DynamicContentSubscriberTest extends TestCase
         $this->subscriber->onContactFilterEvaluate($event);
         $this->assertTrue($event->isEvaluated());
         $this->assertTrue($event->isMatched());
+    }
+
+    public function testOnContactFilterEvaluateMixedFilterSetMustNotClaimFullMatch(): void
+    {
+        $contactId = 6;
+        $filters   = [
+            [
+                'glue'     => 'and',
+                'type'     => 'company_segments',
+                'operator' => OperatorOptions::INCLUDING_ANY,
+                'filter'   => [1],
+            ],
+            [
+                'glue'     => 'and',
+                'type'     => 'text',
+                'field'    => 'city',
+                'operator' => '=',
+                'filter'   => 'Berlin',
+            ],
+        ];
+        // Contact has no city, so the AND-ed text filter does not match.
+        $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId($contactId));
+
+        $this->companySegmentRepository->method('isContactPrimaryCompanyInSegments')
+            ->with($contactId, [1])
+            ->willReturn(true);
+
+        $this->subscriber->onContactFilterEvaluate($event);
+
+        $this->assertFalse(
+            $event->isMatch(),
+            'A matching company_segments filter must not shortcut the whole filter set to "matched" while an AND-ed filter does not match.'
+        );
+    }
+
+    public function testOnContactFilterEvaluateEvaluatesAllCompanySegmentsFilters(): void
+    {
+        $contactId = 7;
+        $filters   = [
+            [
+                'glue'     => 'and',
+                'type'     => 'company_segments',
+                'operator' => OperatorOptions::INCLUDING_ANY,
+                'filter'   => [1],
+            ],
+            [
+                'glue'     => 'and',
+                'type'     => 'company_segments',
+                'operator' => OperatorOptions::INCLUDING_ANY,
+                'filter'   => [2],
+            ],
+        ];
+        $event = new ContactFiltersEvaluateEvent($filters, (new Lead())->setId($contactId));
+
+        $this->companySegmentRepository->expects($this->atLeast(2))->method('isContactPrimaryCompanyInSegments')
+            ->willReturnMap([
+                [$contactId, [1], true],
+                [$contactId, [2], false],
+            ]);
+
+        $this->subscriber->onContactFilterEvaluate($event);
+
+        $this->assertFalse(
+            $event->isMatch(),
+            'Only the first company_segments filter was evaluated; the second AND-ed one does not match, so the set must not match.'
+        );
     }
 
     public function testOnContactFilterEvaluateUnexpectedOperatorThrows(): void

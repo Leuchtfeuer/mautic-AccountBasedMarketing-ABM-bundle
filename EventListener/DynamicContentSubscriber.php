@@ -6,17 +6,22 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use Mautic\DynamicContentBundle\DynamicContentEvents;
 use Mautic\DynamicContentBundle\Event\ContactFiltersEvaluateEvent;
-use Mautic\LeadBundle\Entity\Lead;
-use Mautic\LeadBundle\Segment\OperatorOptions;
+use Mautic\LeadBundle\Entity\LeadListRepository;
+use Mautic\LeadBundle\Helper\PrimaryCompanyHelper;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 final readonly class DynamicContentSubscriber implements EventSubscriberInterface
 {
+    use CompanySegmentFilterMatchTrait;
+
     public function __construct(
         private Config $config,
         private SegmentCompanyRepository $companySegmentRepository,
+        private PrimaryCompanyHelper $primaryCompanyHelper,
+        // @phpstan-ignore property.onlyWritten
+        private LeadListRepository $segmentRepository,
     ) {
     }
 
@@ -33,34 +38,31 @@ final readonly class DynamicContentSubscriber implements EventSubscriberInterfac
             return;
         }
 
-        foreach ($event->getFilters() as $filter) {
-            if ('company_segments' === $filter['type']) {
-                $event->setIsMatched(
-                    $this->isContactPrimaryCompanySegmentRelationshipValid($event->getContact(), $filter['operator'], $filter['filter'])
-                );
-                $event->setIsEvaluated(true);
+        $filters = $event->getFilters();
 
-                return;
-            }
+        if (!$this->containsCompanySegmentsFilter($filters)) {
+            return;
         }
+
+        $contact   = $event->getContact();
+        $leadArray = $this->primaryCompanyHelper->getProfileFieldsWithPrimaryCompany($contact)
+            ?? ['id' => $contact->getId()];
+
+        $event->setIsMatched($this->matchFilterGroupForLead($filters, $leadArray));
+        $event->setIsEvaluated(true);
     }
 
     /**
-     * @param string $operator   empty, !empty, in, !in
-     * @param ?int[] $segmentIds
+     * @param array<array<string, mixed>> $filters
      */
-    private function isContactPrimaryCompanySegmentRelationshipValid(Lead $contact, string $operator, ?array $segmentIds = null): bool
+    private function containsCompanySegmentsFilter(array $filters): bool
     {
-        $contactId = $contact->getId();
+        foreach ($filters as $filter) {
+            if ('company_segments' === ($filter['type'] ?? null)) {
+                return true;
+            }
+        }
 
-        return match ($operator) {
-            OperatorOptions::EMPTY         => $this->companySegmentRepository->isNotContactPrimaryCompanyInAnySegment($contactId),
-            OperatorOptions::NOT_EMPTY     => $this->companySegmentRepository->isContactPrimaryCompanyInAnySegment($contactId),
-            OperatorOptions::INCLUDING_ANY => $this->companySegmentRepository->isContactPrimaryCompanyInSegments($contactId, $segmentIds),
-            OperatorOptions::EXCLUDING_ANY => $this->companySegmentRepository->isNotContactPrimaryCompanyInSegments($contactId, $segmentIds),
-            OperatorOptions::INCLUDING_ALL => $this->companySegmentRepository->isContactPrimaryCompanyInAllSegments($contactId, $segmentIds),
-            OperatorOptions::EXCLUDING_ALL => $this->companySegmentRepository->isNotContactPrimaryCompanyInAllSegments($contactId, $segmentIds),
-            default                        => throw new \InvalidArgumentException(sprintf("Unexpected operator '%s'", $operator)),
-        };
+        return false;
     }
 }

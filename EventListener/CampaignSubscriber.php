@@ -105,14 +105,20 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
 
             $somethingHappened = false;
 
-            if (!empty($addTo)) {
-                $this->companySegmentModel->addCompany($companyEntity, $addTo, true);
-                $somethingHappened = true;
-            }
+            try {
+                if (!empty($addTo)) {
+                    $this->companySegmentModel->addCompany($companyEntity, $addTo, true);
+                    $somethingHappened = true;
+                }
 
-            if (!empty($removeFrom)) {
-                $this->companySegmentModel->removeCompany($companyEntity, $removeFrom, true);
-                $somethingHappened = true;
+                if (!empty($removeFrom)) {
+                    $this->companySegmentModel->removeCompany($companyEntity, $removeFrom, true);
+                    $somethingHappened = true;
+                }
+            } catch (\Throwable $exception) {
+                $event->fail($log, $exception->getMessage());
+
+                continue;
             }
 
             if ($somethingHappened) {
