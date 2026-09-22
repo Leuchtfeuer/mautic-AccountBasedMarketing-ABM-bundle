@@ -87,7 +87,12 @@ final readonly class CompanySegmentRebuildService
 
         foreach ($companySegment->getFilters() as $filter) {
             if (CompanySegmentModel::PROPERTIES_FIELD === $filter['type']) {
-                foreach ($filter['filter'] ?? [] as $dependentSegmentId) {
+                $dependentSegmentIds = $filter['properties']['filter'] ?? $filter['filter'] ?? [];
+                if (!is_array($dependentSegmentIds)) {
+                    continue;
+                }
+
+                foreach ($dependentSegmentIds as $dependentSegmentId) {
                     $dependentSegmentId = (int) $dependentSegmentId;
 
                     // Skip if already rebuilt or in exclude list

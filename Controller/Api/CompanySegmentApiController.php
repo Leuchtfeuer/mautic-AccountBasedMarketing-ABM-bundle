@@ -137,7 +137,7 @@ final class CompanySegmentApiController extends CommonApiController
     public function addCompaniesAction(CompanyModel $companyModel, Request $request, int $id): Response
     {
         $companyIds = $request->request->all()['ids'] ?? null;
-        if (null === $companyIds) {
+        if (!is_array($companyIds)) {
             return $this->returnError('mautic.core.error.badrequest', Response::HTTP_BAD_REQUEST);
         }
 

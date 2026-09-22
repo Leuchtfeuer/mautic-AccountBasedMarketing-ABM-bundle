@@ -295,6 +295,20 @@ final class CompanySegmentApiControllerTest extends MauticMysqlTestCase
         $this->assertTrue($segmentCompany2->isManuallyAdded());
     }
 
+    public function testAddCompaniesToCompanySegmentWithScalarIds(): void
+    {
+        $companySegment = $this->createCompanySegment('Test Segment', 'test-segment', true);
+        $this->em->flush();
+
+        $this->client->request(
+            Request::METHOD_POST,
+            self::API_ENDPOINT.'/'.$companySegment->getId().'/companies/add',
+            ['ids' => '5']
+        );
+
+        self::assertResponseStatusCodeSame(Response::HTTP_BAD_REQUEST);
+    }
+
     public function testAddCompaniesToCompanySegmentWithInvalidCompany(): void
     {
         $companySegment = $this->createCompanySegment('Test Segment', 'test-segment', true);

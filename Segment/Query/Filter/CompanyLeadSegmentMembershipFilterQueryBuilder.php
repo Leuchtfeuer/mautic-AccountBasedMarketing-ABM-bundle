@@ -44,7 +44,8 @@ final class CompanyLeadSegmentMembershipFilterQueryBuilder extends BaseFilterQue
                 ->from(MAUTIC_TABLE_PREFIX.'companies_leads', $cl)
                 ->join($cl, MAUTIC_TABLE_PREFIX.'lead_lists_leads', $lll, $lll.'.lead_id = '.$cl.'.lead_id')
                 ->where($sub->expr()->eq($cl.'.company_id', $companiesTableAlias.'.id'))
-                ->andWhere($sub->expr()->eq($cl.'.is_primary', ':'.$isPrimaryParam));
+                ->andWhere($sub->expr()->eq($cl.'.is_primary', ':'.$isPrimaryParam))
+                ->andWhere($sub->expr()->eq($lll.'.manually_removed', 0));
 
             $queryBuilder->setParameter($isPrimaryParam, 1);
 
@@ -73,7 +74,8 @@ final class CompanyLeadSegmentMembershipFilterQueryBuilder extends BaseFilterQue
             ->join($cl, MAUTIC_TABLE_PREFIX.'lead_lists_leads', $lll, $lll.'.lead_id = '.$cl.'.lead_id')
             ->where($sub->expr()->eq($cl.'.company_id', $companiesTableAlias.'.id'))
             ->andWhere($sub->expr()->eq($cl.'.is_primary', ':'.$isPrimaryParam))
-            ->andWhere($sub->expr()->in($lll.'.leadlist_id', ':'.$segmentIdsParam));
+            ->andWhere($sub->expr()->in($lll.'.leadlist_id', ':'.$segmentIdsParam))
+            ->andWhere($sub->expr()->eq($lll.'.manually_removed', 0));
 
         $queryBuilder->setParameter($segmentIdsParam, $segmentIds, ArrayParameterType::STRING);
         $queryBuilder->setParameter($isPrimaryParam, 1);

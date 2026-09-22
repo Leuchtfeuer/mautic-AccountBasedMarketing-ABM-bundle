@@ -757,12 +757,12 @@ class CompanySegmentModel extends FormModel
             return;
         }
 
-        $leadSleepTime = (int) $leadSleepTime;
+        $leadSleepTime = (float) $leadSleepTime;
 
         if ($leadSleepTime < 1) {
-            usleep($leadSleepTime * 1_000_000);
+            usleep((int) ($leadSleepTime * 1_000_000));
         } else {
-            sleep($leadSleepTime);
+            sleep((int) $leadSleepTime);
         }
     }
 
