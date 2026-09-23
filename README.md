@@ -11,7 +11,7 @@ This plugin brings company-based Segments to Mautic and extends Mautic capabilit
 > [!TIP]
 > Other releases of this plugin may cover different Mautic versions!
 
-- Mautic 7
+- Mautic 7.2+
 - PHP 8.2+
 
 ## Installation

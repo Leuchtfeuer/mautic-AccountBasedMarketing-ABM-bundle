@@ -17,7 +17,7 @@
     "prefer-stable": true,
     "require": {
         "php": "^8.2",
-        "mautic/core-lib": "^7.0",
+        "mautic/core-lib": "^7.2",
         "ext-json": "*"
     },
     "extra": {
