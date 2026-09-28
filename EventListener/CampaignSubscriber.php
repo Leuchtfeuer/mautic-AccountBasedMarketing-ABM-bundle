@@ -56,15 +56,15 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
         }
 
         $event->addAction(self::ACTION_CHANGE_COMPANY_SEGMENTS, [
-            'label'          => 'mautic.company_segments.campaign.action.change_segments',
-            'description'    => 'mautic.company_segments.campaign.action.change_segments_descr',
+            'label'          => 'mautic.campaign.leuchtfeuer.abm.changecompanysegments',
+            'description'    => 'mautic.campaign.leuchtfeuer.abm.changecompanysegments_descr',
             'formType'       => CompanySegmentActionType::class,
             'batchEventName' => LeadEvents::ON_CAMPAIGN_BATCH_ACTION,
         ]);
 
         $event->addCondition(self::CONDITION_COMPANY_SEGMENTS, [
-            'label'       => 'mautic.company_segments.campaign.condition.segments',
-            'description' => 'mautic.company_segments.campaign.condition.segments_descr',
+            'label'       => 'mautic.campaign.leuchtfeuer.abm.company_segments',
+            'description' => 'mautic.campaign.leuchtfeuer.abm.company_segments_descr',
             'formType'    => CampaignEventCompanySegmentsType::class,
             'eventName'   => LeadEvents::ON_CAMPAIGN_TRIGGER_CONDITION,
         ]);
