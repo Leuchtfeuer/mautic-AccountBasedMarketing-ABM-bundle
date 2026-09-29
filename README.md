@@ -1,4 +1,4 @@
-# ABM (Account Based Marketing) by Leuchtfeuer
+# ABM (Account Based Marketing) by Leuchtfeuer.
 
 ## Overview
 
