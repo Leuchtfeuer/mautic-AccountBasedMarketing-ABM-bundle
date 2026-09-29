@@ -68,7 +68,7 @@ final class CompanySegmentController extends AbstractStandardFormController
             'string' => $search,
         ];
 
-        $tmpl = $request->isXmlHttpRequest() ? $request->get('tmpl', 'index') : 'index';
+        $tmpl = $request->isXmlHttpRequest() && 'list' === $request->query->get('tmpl') ? 'list' : 'index';
 
         if (!$permissions[$this->getPermissionBase().':viewother']) {
             $mine            = $this->translator->trans('mautic.core.searchcommand.ismine');
