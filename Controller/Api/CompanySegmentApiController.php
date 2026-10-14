@@ -39,7 +39,7 @@ final class CompanySegmentApiController extends CommonApiController
         ModelFactory $modelFactory,
         EventDispatcherInterface $dispatcher,
         CoreParametersHelper $coreParametersHelper,
-        CompanySegmentModel $companySegmentModel,
+        private readonly CompanySegmentModel $companySegmentModel,
     ) {
         $this->model             = $companySegmentModel;
         $this->entityClass       = CompanySegment::class;
@@ -80,13 +80,11 @@ final class CompanySegmentApiController extends CommonApiController
             return $this->accessDenied();
         }
 
-        \assert($this->model instanceof CompanySegmentModel);
-
         if (!$this->checkEntityAccess($entity, 'edit')) {
             return $this->accessDenied();
         }
 
-        $this->model->removeCompany($company, [$entity], true);
+        $this->companySegmentModel->removeCompany($company, [$entity], true);
 
         $view = $this->view([], Response::HTTP_OK);
 
@@ -112,13 +110,11 @@ final class CompanySegmentApiController extends CommonApiController
             return $this->accessDenied();
         }
 
-        \assert($this->model instanceof CompanySegmentModel);
-
         if (!$this->checkEntityAccess($entity, 'edit')) {
             return $this->accessDenied();
         }
 
-        $this->model->addCompany($company, [$entity], true);
+        $this->companySegmentModel->addCompany($company, [$entity], true);
 
         $view = $this->view([], Response::HTTP_OK);
 
@@ -143,8 +139,6 @@ final class CompanySegmentApiController extends CommonApiController
             return $this->notFound();
         }
 
-        \assert($this->model instanceof CompanySegmentModel);
-
         if (!$this->checkEntityAccess($entity, 'edit')) {
             return $this->accessDenied();
         }
@@ -158,7 +152,7 @@ final class CompanySegmentApiController extends CommonApiController
             } elseif (!$this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $company->getPermissionUser())) {
                 $responseDetail[$companyId] = ['success' => false];
             } else {
-                $this->model->addCompany($company, [$entity], true);
+                $this->companySegmentModel->addCompany($company, [$entity], true);
                 $responseDetail[$company->getId()] = ['success' => true];
             }
         }
