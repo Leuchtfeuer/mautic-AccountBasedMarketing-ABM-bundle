@@ -51,19 +51,19 @@ return [
         'main' => [
             'mautic_company_segments_index' => [
                 'path'       => '/company-segments/{page}',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanySegmentController::indexAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanySegmentController::class.'::indexAction',
             ],
             'mautic_company_segments_action' => [
                 'path'       => '/company-segments/{objectAction}/{objectId}',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanySegmentController::executeAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanySegmentController::class.'::executeAction',
             ],
             'mautic_company_segments_batch_company_set' => [
                 'path'       => '/company-segments/batch/company/set',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\BatchCompanySegmentController::setAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\BatchCompanySegmentController::class.'::setAction',
             ],
             'mautic_company_segments_batch_company_view' => [
                 'path'       => '/company-segments/batch/company/view',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\BatchCompanySegmentController::indexAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\BatchCompanySegmentController::class.'::indexAction',
             ],
         ],
         'api' => [
@@ -75,17 +75,17 @@ return [
             ],
             'mautic_api_companysegmentaddcompany' => [
                 'path'       => '/companysegments/{id}/company/{companyId}/add',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api\CompanySegmentApiController::addCompanyAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api\CompanySegmentApiController::class.'::addCompanyAction',
                 'method'     => 'POST',
             ],
             'mautic_api_companysegmentaddcompanies' => [
                 'path'       => '/companysegments/{id}/companies/add',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api\CompanySegmentApiController::addCompaniesAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api\CompanySegmentApiController::class.'::addCompaniesAction',
                 'method'     => 'POST',
             ],
             'mautic_api_companysegmentremovecompany' => [
                 'path'       => '/companysegments/{id}/company/{companyId}/remove',
-                'controller' => 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api\CompanySegmentApiController::removeCompanyAction',
+                'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api\CompanySegmentApiController::class.'::removeCompanyAction',
                 'method'     => 'POST',
             ],
         ],
