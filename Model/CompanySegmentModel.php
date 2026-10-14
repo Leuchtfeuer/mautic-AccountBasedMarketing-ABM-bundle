@@ -123,13 +123,13 @@ class CompanySegmentModel extends FormModel
         // make sure alias is not already taken
         $repo      = $this->getRepository();
         $testAlias = $alias;
-        $existing  = $repo->getSegments(null, $testAlias, $entity->getId());
+        $existing  = $repo->getSegments($testAlias, $entity->getId());
         $count     = count($existing);
         $aliasTag  = $count;
 
         while ($count > 0) {
             $testAlias = $alias.$aliasTag;
-            $existing  = $repo->getSegments(null, $testAlias, $entity->getId());
+            $existing  = $repo->getSegments($testAlias, $entity->getId());
             $count     = count($existing);
             ++$aliasTag;
         }
@@ -464,9 +464,15 @@ class CompanySegmentModel extends FormModel
      */
     public function getCompanySegments(string $alias = ''): array
     {
-        $user = false === $this->security->isGranted($this->getPermissionBase().':viewother') ? $this->userHelper->getUser() : null;
+        $segments = $this->getRepository()->getSegments($alias);
 
-        return $this->getRepository()->getSegments($user, $alias);
+        if ($this->security->isGranted($this->getPermissionBase().':viewother')) {
+            return $segments;
+        }
+
+        $userId = $this->userHelper->getUser()->getId();
+
+        return array_filter($segments, static fn (array $segment): bool => $segment['createdBy'] === $userId);
     }
 
     /**

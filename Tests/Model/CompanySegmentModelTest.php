@@ -42,7 +42,7 @@ final class CompanySegmentModelTest extends TestCase
         $companySegmentRepository = $this->createMock(CompanySegmentRepository::class);
         $companySegmentRepository->expects($this->once())
             ->method('getSegments')
-            ->with(null, $alias, $id)
+            ->with($alias, $id)
             ->willReturn([]);
 
         $model->expects($this->once())
@@ -85,8 +85,8 @@ final class CompanySegmentModelTest extends TestCase
         $companySegmentRepository->expects($this->exactly(2))
             ->method('getSegments')
             ->willReturnMap([
-                [null, $alias, $id, [['id' => 1, 'name' => 'the name', 'alias' => 'the alias']]],
-                [null, $alias.'1', $id, []],
+                [$alias, $id, [['id' => 1, 'name' => 'the name', 'alias' => 'the alias', 'createdBy' => 1]]],
+                [$alias.'1', $id, []],
             ]);
 
         $model->expects($this->once())

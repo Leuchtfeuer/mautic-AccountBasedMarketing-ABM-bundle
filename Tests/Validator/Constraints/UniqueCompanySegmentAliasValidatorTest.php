@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Validator\Constraints;
 
-use Mautic\CoreBundle\Helper\UserHelper;
-use Mautic\UserBundle\Entity\User;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Validator\Constraints\UniqueCompanySegmentAlias;
@@ -26,11 +24,6 @@ final class UniqueCompanySegmentAliasValidatorTest extends ConstraintValidatorTe
      * @var MockObject&CompanySegmentRepository
      */
     private MockObject $segmentRepository;
-
-    /**
-     * @var MockObject&UserHelper
-     */
-    private MockObject $userHelper;
 
     public function testValueIsNotCompanySegment(): void
     {
@@ -82,7 +75,6 @@ final class UniqueCompanySegmentAliasValidatorTest extends ConstraintValidatorTe
     {
         $aliasName = 'alias';
         $segmentId = 38746584375698237;
-        $user      = $this->createStub(User::class);
 
         $constraint        = $this->createStub(UniqueCompanySegmentAlias::class);
         $constraint->field = 'alias';
@@ -94,11 +86,8 @@ final class UniqueCompanySegmentAliasValidatorTest extends ConstraintValidatorTe
 
         $this->segmentRepository->expects($this->once())
             ->method('getSegments')
-            ->with($user, $aliasName, $segmentId)
+            ->with($aliasName, $segmentId)
             ->willReturn([]);
-        $this->userHelper->expects($this->once())
-            ->method('getUser')
-            ->willReturn($user);
 
         $this->validator->validate($companySegment, $constraint);
         $this->assertNoViolation();
@@ -109,7 +98,6 @@ final class UniqueCompanySegmentAliasValidatorTest extends ConstraintValidatorTe
         $aliasName  = 'alias';
         $aliasField = 'alias_field';
         $segmentId  = 38746584375698237;
-        $user       = $this->createStub(User::class);
 
         $constraint        = $this->createStub(UniqueCompanySegmentAlias::class);
         $constraint->field = $aliasField;
@@ -121,11 +109,8 @@ final class UniqueCompanySegmentAliasValidatorTest extends ConstraintValidatorTe
 
         $this->segmentRepository->expects($this->once())
             ->method('getSegments')
-            ->with($user, $aliasName, $segmentId)
+            ->with($aliasName, $segmentId)
             ->willReturn([$this->createStub(CompanySegment::class)]);
-        $this->userHelper->expects($this->once())
-            ->method('getUser')
-            ->willReturn($user);
 
         $this->validator->validate($companySegment, $constraint);
 
@@ -137,16 +122,13 @@ final class UniqueCompanySegmentAliasValidatorTest extends ConstraintValidatorTe
     protected function createValidator(): ConstraintValidatorInterface
     {
         $this->segmentRepository = $this->createMock(CompanySegmentRepository::class);
-        $this->userHelper        = $this->createMock(UserHelper::class);
 
-        return new UniqueCompanySegmentAliasValidator($this->segmentRepository, $this->userHelper);
+        return new UniqueCompanySegmentAliasValidator($this->segmentRepository);
     }
 
     private function assertNoActionsTaken(): void
     {
         $this->segmentRepository->expects($this->never())
             ->method('getSegments');
-        $this->userHelper->expects($this->never())
-            ->method('getUser');
     }
 }

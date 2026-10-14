@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity;
 
 use Mautic\CoreBundle\Entity\CommonRepository;
-use Mautic\UserBundle\Entity\User;
 
 /**
  * @extends CommonRepository<CompanySegment>
@@ -13,40 +12,31 @@ use Mautic\UserBundle\Entity\User;
 class CompanySegmentRepository extends CommonRepository
 {
     /**
-     * @return array<array{id: string, name: string, alias: string}>
+     * @return array<array{id: string, name: string, alias: string, createdBy: int|null}>
      */
-    public function getSegments(?User $user = null, ?string $alias = null, ?int $id = null): array
+    public function getSegments(?string $alias = null, ?int $excludeId = null): array
     {
         $q = $this->getEntityManager()->createQueryBuilder()
             ->from(CompanySegment::class, $this->getTableAlias(), $this->getTableAlias().'.id');
 
-        $q->select('partial '.$this->getTableAlias().'.{id, name, alias}')
+        $q->select('partial '.$this->getTableAlias().'.{id, name, alias, createdBy}')
             ->andWhere($q->expr()->eq($this->getTableAlias().'.isPublished', ':true'))
             ->setParameter('true', true, 'boolean');
-
-        if (null !== $user) {
-            $q->andWhere(
-                $q->expr()->orX(
-                    $q->expr()->eq($this->getTableAlias().'.createdBy', ':user')
-                )
-            );
-            $q->setParameter('user', $user->getId());
-        }
 
         if (null !== $alias && '' !== $alias) {
             $q->andWhere($this->getTableAlias().'.alias = :alias');
             $q->setParameter('alias', $alias);
         }
 
-        if (null !== $id && $id > 0) {
+        if (null !== $excludeId && $excludeId > 0) {
             $q->andWhere(
-                $q->expr()->neq($this->getTableAlias().'.id', $id)
+                $q->expr()->neq($this->getTableAlias().'.id', $excludeId)
             );
         }
 
         $q->orderBy($this->getTableAlias().'.name');
 
-        /** @var array<array{id: string, name: string, alias: string}> $result */
+        /** @var array<array{id: string, name: string, alias: string, createdBy: int|null}> $result */
         $result = $q->getQuery()->getArrayResult();
 
         return $result;

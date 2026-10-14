@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Validator\Constraints;
 
-use Mautic\CoreBundle\Helper\UserHelper;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use Symfony\Component\Validator\Constraint;
@@ -14,7 +13,7 @@ use Symfony\Component\Validator\Exception\UnexpectedValueException;
 
 class UniqueCompanySegmentAliasValidator extends ConstraintValidator
 {
-    public function __construct(public CompanySegmentRepository $companySegmentRepository, public UserHelper $userHelper)
+    public function __construct(public CompanySegmentRepository $companySegmentRepository)
     {
     }
 
@@ -35,11 +34,7 @@ class UniqueCompanySegmentAliasValidator extends ConstraintValidator
             return;
         }
 
-        $segments = $this->companySegmentRepository->getSegments(
-            $this->userHelper->getUser(),
-            $alias,
-            $value->getId()
-        );
+        $segments = $this->companySegmentRepository->getSegments($alias, $value->getId());
 
         if (0 === count($segments)) {
             return;
