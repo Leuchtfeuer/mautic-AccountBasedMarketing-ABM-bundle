@@ -82,9 +82,7 @@ final class CompanySegmentApiController extends CommonApiController
 
         \assert($this->model instanceof CompanySegmentModel);
 
-        // Does the user have access to the company segment
-        $companySegments = $this->model->getCompanySegments();
-        if (!isset($companySegments[$id])) {
+        if (!$this->checkEntityAccess($entity, 'edit')) {
             return $this->accessDenied();
         }
 
@@ -116,9 +114,7 @@ final class CompanySegmentApiController extends CommonApiController
 
         \assert($this->model instanceof CompanySegmentModel);
 
-        // Does the user have access to the company segment
-        $companySegments = $this->model->getCompanySegments();
-        if (!isset($companySegments[$id])) {
+        if (!$this->checkEntityAccess($entity, 'edit')) {
             return $this->accessDenied();
         }
 
@@ -149,9 +145,7 @@ final class CompanySegmentApiController extends CommonApiController
 
         \assert($this->model instanceof CompanySegmentModel);
 
-        // Does the user have access to the company segment
-        $companySegments = $this->model->getCompanySegments();
-        if (!isset($companySegments[$id])) {
+        if (!$this->checkEntityAccess($entity, 'edit')) {
             return $this->accessDenied();
         }
 
