@@ -66,9 +66,9 @@ final class CompanySegmentApiController extends CommonApiController
      */
     public function removeCompanyAction(CompanyModel $companyModel, int $id, int $companyId): Response
     {
-        $entity = $this->model->getEntity($id);
+        $companySegment = $this->model->getEntity($id);
 
-        if (null === $entity) {
+        if (null === $companySegment) {
             return $this->notFound();
         }
 
@@ -80,11 +80,11 @@ final class CompanySegmentApiController extends CommonApiController
             return $this->accessDenied();
         }
 
-        if (!$this->checkEntityAccess($entity, 'edit')) {
+        if (!$this->checkEntityAccess($companySegment, 'edit')) {
             return $this->accessDenied();
         }
 
-        $this->companySegmentModel->removeCompany($company, [$entity], true);
+        $this->companySegmentModel->removeCompany($company, [$companySegment], true);
 
         $view = $this->view([], Response::HTTP_OK);
 
@@ -96,9 +96,9 @@ final class CompanySegmentApiController extends CommonApiController
      */
     public function addCompanyAction(CompanyModel $companyModel, int $id, int $companyId): Response
     {
-        $entity = $this->model->getEntity($id);
+        $companySegment = $this->model->getEntity($id);
 
-        if (null === $entity) {
+        if (null === $companySegment) {
             return $this->notFound();
         }
 
@@ -110,11 +110,11 @@ final class CompanySegmentApiController extends CommonApiController
             return $this->accessDenied();
         }
 
-        if (!$this->checkEntityAccess($entity, 'edit')) {
+        if (!$this->checkEntityAccess($companySegment, 'edit')) {
             return $this->accessDenied();
         }
 
-        $this->companySegmentModel->addCompany($company, [$entity], true);
+        $this->companySegmentModel->addCompany($company, [$companySegment], true);
 
         $view = $this->view([], Response::HTTP_OK);
 
@@ -133,13 +133,13 @@ final class CompanySegmentApiController extends CommonApiController
             return $this->returnError('mautic.core.error.badrequest', Response::HTTP_BAD_REQUEST);
         }
 
-        $entity = $this->model->getEntity($id);
+        $companySegment = $this->model->getEntity($id);
 
-        if (null === $entity) {
+        if (null === $companySegment) {
             return $this->notFound();
         }
 
-        if (!$this->checkEntityAccess($entity, 'edit')) {
+        if (!$this->checkEntityAccess($companySegment, 'edit')) {
             return $this->accessDenied();
         }
 
@@ -152,7 +152,7 @@ final class CompanySegmentApiController extends CommonApiController
             } elseif (!$this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $company->getPermissionUser())) {
                 $responseDetail[$companyId] = ['success' => false];
             } else {
-                $this->companySegmentModel->addCompany($company, [$entity], true);
+                $this->companySegmentModel->addCompany($company, [$companySegment], true);
                 $responseDetail[$company->getId()] = ['success' => true];
             }
         }
