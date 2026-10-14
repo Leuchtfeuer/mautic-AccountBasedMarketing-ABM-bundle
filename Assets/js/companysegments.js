@@ -14,7 +14,7 @@ Mautic.company_segmentsOnLoad = function(container, response) {
                 },
                 false,
                 true,
-                "GET"
+                'GET'
             );
         });
     }
@@ -74,7 +74,7 @@ Mautic.company_segmentsOnLoad = function(container, response) {
             handle: '.ri-draggable',
             helper: function(e, ui) {
                 ui.children().each(function() {
-                    if (mQuery(this).is(":visible")) {
+                    if (mQuery(this).is(':visible')) {
                         mQuery(this).width(mQuery(this).width());
                     }
                 });
@@ -127,15 +127,15 @@ Mautic.addCompanySegmentsFilter = function (elId, elObj) {
         prefix = parent.attr('id');
     }
 
-    const filterBase  = prefix + "[filters][" + filterNum + "]";
-    const filterIdBase = prefix + "_filters_" + filterNum + "_";
+    const filterBase  = prefix + '[filters][' + filterNum + ']';
+    const filterIdBase = prefix + '_filters_' + filterNum + '_';
 
     if (mQuery('#' + prefix + '_filters .filter--row').length === 0) {
-        prototype.find(".filter--condition-when").removeClass('hide');
-        prototype.find(".filter--condition").addClass('hide');
+        prototype.find('.filter--condition-when').removeClass('hide');
+        prototype.find('.filter--condition').addClass('hide');
     }
 
-    prototype.find("a.remove-selected").on('click', function() {
+    prototype.find('a.remove-selected').on('click', function() {
         mQuery(this).closest('.filter--row').animate(
             {'opacity': 0},
             'fast',
@@ -146,7 +146,7 @@ Mautic.addCompanySegmentsFilter = function (elId, elObj) {
         );
     });
 
-    prototype.find("a.copy-filter-group").on('click', function() {
+    prototype.find('a.copy-filter-group').on('click', function() {
         const filterRow = mQuery(this).closest('.filter--row');
         const clonedFilter = filterRow.clone(true);
 
@@ -158,9 +158,9 @@ Mautic.addCompanySegmentsFilter = function (elId, elObj) {
     const filterTypeIcon = filterOption.data('field-icon');
     prototype.find('.object-icon').addClass(filterTypeIcon);
 
-    prototype.find("input[name='" + filterBase + "[field]']").val(elId);
-    prototype.find("input[name='" + filterBase + "[type]']").val(fieldType);
-    prototype.find("input[name='" + filterBase + "[object]']").val(fieldObject);
+    prototype.find('input[name="' + filterBase + '[field]"]').val(elId);
+    prototype.find('input[name="' + filterBase + '[type]"]').val(fieldType);
+    prototype.find('input[name="' + filterBase + '[object]"]').val(fieldObject);
     prototype.appendTo('#' + prefix + '_filters');
 
     const operators = filterOption.data('field-operators');
@@ -217,7 +217,7 @@ Mautic.reorderCompanySegmentFilters = function() {
             const name   = mQuery(this).attr('name');
             const suffix = id.split(/[_]+/).pop();
 
-            const isProperties = id.includes("_properties_");
+            const isProperties = id.includes('_properties_');
 
             if (prefix + '_filters___name___filter' === id) {
                 return true;
@@ -242,7 +242,7 @@ Mautic.reorderCompanySegmentFilters = function() {
             }
 
             // Destroy the chosen and recreate
-            if (mQuery(this).is('select') && suffix == "filter") {
+            if (mQuery(this).is('select') && suffix == 'filter') {
                 Mautic.destroyChosen(mQuery(this));
                 Mautic.activateChosenSelect(mQuery(this));
             }
