@@ -16,7 +16,6 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\NullOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -92,7 +91,6 @@ final class UpdateCompanySegmentsCommand extends ModeratedCommand
         $batch                  = $input->getOption('batch-limit');
         $maxCompanies           = $input->getOption('max-companies');
         $enableTimeMeasurement  = (bool) $input->getOption('timing');
-        $output                 = ($input->getOption('quiet')) ? new NullOutput() : $output;
         $excludeCompanySegments = $this->cleanExcludeCompanySegments($input->getOption('exclude-companysegment-id'), $output);
 
         if (null !== $companySegmentId && (!is_numeric($companySegmentId) || ((int) $companySegmentId <= 0))) {
