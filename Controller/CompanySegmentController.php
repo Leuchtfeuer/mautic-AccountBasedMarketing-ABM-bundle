@@ -276,166 +276,66 @@ final class CompanySegmentController extends AbstractStandardFormController
 
     public function deleteAction(Request $request, int $objectId): Response
     {
-        return $this->deleteStandard($request, $objectId);
+        // Core deleteStandard() calls deleteEntity(null) when the entity does not exist.
+        if ('POST' === $request->getMethod() && null === $this->getModel($this->getModelName())->getEntity($objectId)) {
+            return $this->flashRedirect($request, 'delete', [[
+                'type'    => 'error',
+                'msg'     => $this->getTranslatedString('error.notfound'),
+                'msgVars' => ['%id%' => $objectId],
+            ]]);
+        }
+
+        try {
+            return $this->deleteStandard($request, $objectId);
+        } catch (DeleteEntityDependencyException $e) {
+            $flashes = [];
+            foreach ($e->getErrors() as $error) {
+                $flashes[] = ['type' => 'error', 'msg' => $error];
+            }
+
+            return $this->flashRedirect($request, 'delete', $flashes);
+        }
     }
 
     public function batchDeleteAction(Request $request): Response
     {
-        return $this->batchDeleteStandard($request);
-    }
+        try {
+            return $this->batchDeleteStandard($request);
+        } catch (DeleteCompanySegmentsDependencyException $e) {
+            $flashes = [];
+            foreach ($e->getErrors() as $error) {
+                $flashes[] = ['type' => 'error', 'msg' => $error];
+            }
 
-    /**
-     * Overrides the core method to catch the dependency exception thrown by
-     * CompanySegmentModel::deleteEntity() when other segments reference the
-     * segment in their filters (core PR 16025 changed this in
-     * AbstractStandardFormController; the plugin keeps core untouched).
-     *
-     * @param int $objectId
-     */
-    protected function deleteStandard(Request $request, $objectId): Response
-    {
-        $page      = $request->getSession()->get('mautic.'.$this->getSessionBase().'.page', 1);
-        $returnUrl = $this->generateUrl($this->getIndexRoute(), ['page' => $page]);
-        $flashes   = [];
-        $model     = $this->getModel($this->getModelName());
-        $entity    = $model->getEntity($objectId);
-
-        $postActionVars = [
-            'returnUrl'       => $returnUrl,
-            'viewParameters'  => ['page' => $page],
-            'contentTemplate' => $this->getControllerBase().'::'.$this->getPostActionControllerAction('delete').'Action',
-            'passthroughVars' => [
-                'mauticContent' => $this->getJsLoadMethodPrefix(),
-            ],
-            'entity' => $entity,
-        ];
-
-        if ('POST' === $request->getMethod()) {
-            if (null === $entity) {
+            if ([] !== $e->getDeletedEntities()) {
                 $flashes[] = [
-                    'type'    => 'error',
-                    'msg'     => $this->getTranslatedString('error.notfound'),
-                    'msgVars' => ['%id%' => $objectId],
+                    'type'    => 'notice',
+                    'msg'     => $this->getTranslatedString('notice.batch_deleted'),
+                    'msgVars' => ['%count%' => count($e->getDeletedEntities())],
                 ];
-            } elseif (!$this->checkActionPermission('delete', $entity)) {
-                $this->throwAccessDenied();
-            } elseif ($model->isLocked($entity)) {
-                return $this->isLocked($postActionVars, $entity, $this->getModelName());
-            } else {
-                try {
-                    $model->deleteEntity($entity);
-                    $identifier = $this->translator->trans($entity->getName());
-                    $flashes[]  = [
-                        'type'    => 'notice',
-                        'msg'     => 'mautic.core.notice.deleted',
-                        'msgVars' => [
-                            '%name%' => $identifier,
-                            '%id%'   => $objectId,
-                        ],
-                    ];
-                } catch (DeleteEntityDependencyException $e) {
-                    foreach ($e->getErrors() as $error) {
-                        $flashes[] = ['type' => 'error', 'msg' => $error];
-                    }
-                }
             }
-        } // else don't do anything
 
-        // The parent phpdoc promises JsonResponse|RedirectResponse, but the core
-        // postActionRedirect() is only typed to return Response.
-        // @phpstan-ignore return.type
-        return $this->postActionRedirect(
-            $this->getPostActionRedirectArguments(
-                array_merge(
-                    $postActionVars,
-                    [
-                        'flashes' => $flashes,
-                    ]
-                ),
-                'delete'
-            )
-        );
+            return $this->flashRedirect($request, 'batchDelete', $flashes);
+        }
     }
 
     /**
-     * Overrides the core method to catch the dependency exception thrown by
-     * CompanySegmentModel::deleteEntities() and flash the collected errors.
+     * @param array<array<string, mixed>> $flashes
      */
-    protected function batchDeleteStandard(Request $request): Response
+    private function flashRedirect(Request $request, string $action, array $flashes): Response
     {
-        $page      = $request->getSession()->get('mautic.'.$this->getSessionBase().'.page', 1);
-        $returnUrl = $this->generateUrl($this->getIndexRoute(), ['page' => $page]);
-        $flashes   = [];
+        $page = $request->getSession()->get('mautic.'.$this->getSessionBase().'.page', 1);
 
-        $postActionVars = [
-            'returnUrl'       => $returnUrl,
-            'viewParameters'  => ['page' => $page],
-            'contentTemplate' => $this->getControllerBase().'::'.$this->getPostActionControllerAction('batchDelete').'Action',
-            'passthroughVars' => [
-                'mauticContent' => $this->getJsLoadMethodPrefix(),
-            ],
-        ];
-
-        if ('POST' === $request->getMethod()) {
-            $model = $this->getModel($this->getModelName());
-            \assert($model instanceof CompanySegmentModel);
-            $ids       = json_decode($request->query->get('ids', ''));
-            $deleteIds = [];
-
-            // Loop over the IDs to perform access checks pre-delete
-            foreach ($ids as $objectId) {
-                $entity = $model->getEntity($objectId);
-
-                if (null === $entity) {
-                    $flashes[] = [
-                        'type'    => 'error',
-                        'msg'     => $this->getTranslatedString('error.notfound'),
-                        'msgVars' => ['%id%' => $objectId],
-                    ];
-                } elseif (!$this->checkActionPermission('batchDelete', $entity)) {
-                    $flashes[] = $this->getAccessDeniedFlash();
-                } elseif ($model->isLocked($entity)) {
-                    $flashes[] = $this->isLocked($postActionVars, $entity, $this->getModelName(), true);
-                } else {
-                    $deleteIds[] = $objectId;
-                }
-            }
-
-            // Delete everything we are able to
-            if ([] !== $deleteIds) {
-                try {
-                    $entities = $model->deleteEntities($deleteIds);
-                } catch (DeleteCompanySegmentsDependencyException $e) {
-                    $entities = $e->getDeletedEntities();
-                    foreach ($e->getErrors() as $error) {
-                        $flashes[] = ['type' => 'error', 'msg' => $error];
-                    }
-                }
-
-                if ($entities) {
-                    $flashes[] = [
-                        'type'    => 'notice',
-                        'msg'     => $this->getTranslatedString('notice.batch_deleted'),
-                        'msgVars' => [
-                            '%count%' => count($entities),
-                        ],
-                    ];
-                }
-            }
-        } // else don't do anything
-
-        // The parent phpdoc promises JsonResponse|RedirectResponse, but the core
-        // postActionRedirect() is only typed to return Response.
-        // @phpstan-ignore return.type
         return $this->postActionRedirect(
             $this->getPostActionRedirectArguments(
-                array_merge(
-                    $postActionVars,
-                    [
-                        'flashes' => $flashes,
-                    ]
-                ),
-                'batchDelete'
+                [
+                    'returnUrl'       => $this->generateUrl($this->getIndexRoute(), ['page' => $page]),
+                    'viewParameters'  => ['page' => $page],
+                    'contentTemplate' => $this->getControllerBase().'::'.$this->getPostActionControllerAction($action).'Action',
+                    'passthroughVars' => ['mauticContent' => $this->getJsLoadMethodPrefix()],
+                    'flashes'         => $flashes,
+                ],
+                $action
             )
         );
     }
