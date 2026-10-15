@@ -157,7 +157,7 @@ class SegmentCompanyRepository extends CommonRepository
     {
         $segmentIds = $this->fetchContactPrimaryCompanyToSegmentIdsRelationships($contactId, $expectedSegmentIds);
 
-        return [] === $segmentIds;
+        return count($segmentIds) < count($expectedSegmentIds);
     }
 
     /**

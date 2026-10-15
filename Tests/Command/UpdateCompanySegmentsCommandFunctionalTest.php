@@ -7,6 +7,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Command;
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\CoreBundle\Tests\Functional\CreateTestEntitiesTrait;
 use Mautic\LeadBundle\Command\UpdateLeadListsCommand;
+use Mautic\LeadBundle\Entity\Company;
 use Mautic\LeadBundle\Entity\CompanyLead;
 use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Entity\LeadList;
@@ -14,6 +15,7 @@ use Mautic\LeadBundle\Entity\LeadListRepository;
 use Mautic\LeadBundle\Entity\ListLead;
 use Mautic\LeadBundle\Model\ListModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Command\UpdateCompanySegmentsCommand;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 
@@ -309,6 +311,122 @@ final class UpdateCompanySegmentsCommandFunctionalTest extends MauticMysqlTestCa
         $this->assertCount(2, $resultSegmentCompaniesAfter);
         $this->assertEquals($resultSegmentCompaniesAfter[0]->getCompany()->getId(), $resultSegmentCompaniesAfter[1]->getCompany()->getId());
         $this->assertEquals($resultSegmentCompaniesAfter[1]->getCompanySegment()->getId(), $companySegmentTwo->getId());
+    }
+
+    public function testUpdateCompanySegmentWithIncludingAllOperator(): void
+    {
+        [$segmentA, $segmentB, $companyInBoth] = $this->createCompaniesInTwoSegments();
+
+        $segment = $this->createCompanySegment('In all', 'in_all', true, $this->membershipFilter('in_all', [$segmentA, $segmentB]));
+        $this->em->flush();
+
+        $this->testSymfonyCommand(UpdateCompanySegmentsCommand::NAME, ['--bypass-locking' => true]);
+
+        $members = $this->em->getRepository(SegmentCompany::class)->findBy(['companySegment' => $segment]);
+        $this->assertCount(1, $members);
+        $this->assertSame($companyInBoth->getId(), $members[0]->getCompany()->getId());
+    }
+
+    public function testUpdateCompanySegmentWithExcludingAllOperator(): void
+    {
+        [$segmentA, $segmentB, $companyInBoth] = $this->createCompaniesInTwoSegments();
+
+        $segment = $this->createCompanySegment('Not in all', 'not_in_all', true, $this->membershipFilter('!in_all', [$segmentA, $segmentB]));
+        $this->em->flush();
+
+        $this->testSymfonyCommand(UpdateCompanySegmentsCommand::NAME, ['--bypass-locking' => true]);
+
+        $members   = $this->em->getRepository(SegmentCompany::class)->findBy(['companySegment' => $segment]);
+        $memberIds = array_map(fn (SegmentCompany $sc) => $sc->getCompany()->getId(), $members);
+        $this->assertCount(2, $members);
+        $this->assertNotContains($companyInBoth->getId(), $memberIds);
+    }
+
+    public function testUpdateCompanySegmentWithLeadListIncludingAllOperator(): void
+    {
+        $companyInBoth = $this->createCompany('both', 'both@test.com');
+        $companyInOne  = $this->createCompany('one', 'one@test.com');
+        $this->createCompany('none', 'none@test.com');
+
+        $contactBothOne = $this->createLead('Both One', emailId: 'both1@mautic.com');
+        $contactBothTwo = $this->createLead('Both Two', emailId: 'both2@mautic.com');
+        $contactOne     = $this->createLead('One', emailId: 'one@mautic.com');
+
+        $leadSegment1 = $this->createSegment('segment_1', []);
+        $leadSegment2 = $this->createSegment('segment_2', []);
+        $this->em->flush();
+
+        $this->addLeadToSegment($contactBothOne, $leadSegment1);
+        $this->addLeadToSegment($contactBothTwo, $leadSegment2);
+        $this->addLeadToSegment($contactOne, $leadSegment1);
+
+        $this->createCompanyLead($companyInBoth, $contactBothOne);
+        $this->createCompanyLead($companyInBoth, $contactBothTwo);
+        $this->createCompanyLead($companyInOne, $contactOne);
+        $this->em->flush();
+
+        $filter = [
+            'filters' => [
+                'glue'       => 'and',
+                'operator'   => 'in_all',
+                'properties' => [
+                    'filter' => [$leadSegment1->getId(), $leadSegment2->getId()],
+                ],
+                'field'  => 'contactsegmentmembership',
+                'type'   => 'leadlist',
+                'object' => 'any_companycontact',
+            ],
+        ];
+        $segment = $this->createCompanySegment('In all lead lists', 'in_all_lead_lists', true, $filter);
+        $this->em->flush();
+
+        $this->testSymfonyCommand(UpdateCompanySegmentsCommand::NAME, ['--bypass-locking' => true]);
+
+        $members = $this->em->getRepository(SegmentCompany::class)->findBy(['companySegment' => $segment]);
+        $this->assertCount(1, $members);
+        $this->assertSame($companyInBoth->getId(), $members[0]->getCompany()->getId());
+    }
+
+    /**
+     * Creates three companies: one in segments A and B, one only in A, one in none.
+     *
+     * @return array{CompanySegment, CompanySegment, Company}
+     */
+    private function createCompaniesInTwoSegments(): array
+    {
+        $companyInBoth = $this->createCompany('both', 'both@test.com');
+        $companyInA    = $this->createCompany('only-a', 'a@test.com');
+        $this->createCompany('none', 'none@test.com');
+
+        $segmentA = $this->createCompanySegment('Segment A', 'segment_a');
+        $segmentB = $this->createCompanySegment('Segment B', 'segment_b');
+
+        $this->addCompanyToCompanySegment($companyInBoth, $segmentA);
+        $this->addCompanyToCompanySegment($companyInBoth, $segmentB);
+        $this->addCompanyToCompanySegment($companyInA, $segmentA);
+
+        return [$segmentA, $segmentB, $companyInBoth];
+    }
+
+    /**
+     * @param array<CompanySegment> $segments
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function membershipFilter(string $operator, array $segments): array
+    {
+        return [
+            'filters' => [
+                'glue'       => 'and',
+                'operator'   => $operator,
+                'properties' => [
+                    'filter' => array_map(fn (CompanySegment $segment) => $segment->getId(), $segments),
+                ],
+                'field'  => 'company_segments',
+                'type'   => 'company_segments',
+                'object' => 'company_segments',
+            ],
+        ];
     }
 
     public function testUpdateCompanySegmentsWithLeadListFilter(): void

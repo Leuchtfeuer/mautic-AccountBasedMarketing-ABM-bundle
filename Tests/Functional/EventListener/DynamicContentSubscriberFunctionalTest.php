@@ -313,6 +313,82 @@ final class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->assertStringContainsString('Premium Content', (string) $response->getContent());
     }
 
+    public function testLeadWithCompanyInOnlyOneSegmentDoesNotSeeContentWithIncludingAllOperator(): void
+    {
+        $segment1 = $this->createCompanySegment('VIP Companies', 'vip-companies');
+        $segment2 = $this->createCompanySegment('Gold Companies', 'gold-companies');
+
+        $company = $this->createCompany('Half Corp');
+        $this->addCompanyToCompanySegment($company, $segment1);
+
+        $lead = $this->createLead('half@corp.com', 'Half');
+        $this->addLeadToCompany($lead, $company, true);
+
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
+        $contactTracker->setSystemContact($lead);
+
+        $filters = [
+            [
+                'glue'     => 'and',
+                'field'    => 'company_segments',
+                'object'   => 'company_segments',
+                'type'     => 'company_segments',
+                'filter'   => [$segment1->getId(), $segment2->getId()],
+                'display'  => null,
+                'operator' => 'in_all',
+            ],
+        ];
+        $dynamicContent = $this->createDynamicContentWithFilter($filters, 'All Segments Content');
+
+        $page = $this->createPage($dynamicContent);
+
+        $this->logoutUser();
+
+        $this->client->request(Request::METHOD_GET, sprintf('/%s?contactId=%d', $page->getAlias(), $lead->getId()));
+
+        $response = $this->client->getResponse();
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString('All Segments Content', (string) $response->getContent());
+    }
+
+    public function testLeadWithCompanyInOnlyOneSegmentSeesContentWithExcludingAllOperator(): void
+    {
+        $segment1 = $this->createCompanySegment('VIP Companies', 'vip-companies');
+        $segment2 = $this->createCompanySegment('Gold Companies', 'gold-companies');
+
+        $company = $this->createCompany('Half Corp');
+        $this->addCompanyToCompanySegment($company, $segment1);
+
+        $lead = $this->createLead('half@corp.com', 'Half');
+        $this->addLeadToCompany($lead, $company, true);
+
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
+        $contactTracker->setSystemContact($lead);
+
+        $filters = [
+            [
+                'glue'     => 'and',
+                'field'    => 'company_segments',
+                'object'   => 'company_segments',
+                'type'     => 'company_segments',
+                'filter'   => [$segment1->getId(), $segment2->getId()],
+                'display'  => null,
+                'operator' => '!in_all',
+            ],
+        ];
+        $dynamicContent = $this->createDynamicContentWithFilter($filters, 'Not All Segments Content');
+
+        $page = $this->createPage($dynamicContent);
+
+        $this->logoutUser();
+
+        $this->client->request(Request::METHOD_GET, sprintf('/%s?contactId=%d', $page->getAlias(), $lead->getId()));
+
+        $response = $this->client->getResponse();
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Not All Segments Content', (string) $response->getContent());
+    }
+
     /**
      * Helper: Create DynamicContent with company_segments filters.
      *

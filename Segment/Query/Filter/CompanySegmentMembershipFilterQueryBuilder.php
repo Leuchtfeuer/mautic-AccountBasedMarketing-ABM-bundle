@@ -16,17 +16,12 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentM
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Handles Company Segment membership filters within Company Segments and Lead Segments.
- *
- * This filter allows:
- * - Filtering companies by their membership in other company segments (uses pre-materialized company_segments_companies table)
- * - Filtering leads by their primary company's segment membership (uses pre-materialized company_segments_companies table)
- *
- * Performance: Uses simple joins on the materialized company_segments_companies table instead of recursive subqueries.
- * The company_segments_companies table is populated by the UpdateCompanySegmentsCommand.
+ * Allows filtering companies by their membership in other company segments and filtering leads by their primary company's segment membership.
  */
 final class CompanySegmentMembershipFilterQueryBuilder extends BaseFilterQueryBuilder implements EventSubscriberInterface
 {
+    use MembershipOperatorExpressionTrait;
+
     public static function getServiceId(): string
     {
         return self::class;
@@ -79,31 +74,28 @@ final class CompanySegmentMembershipFilterQueryBuilder extends BaseFilterQueryBu
             return $queryBuilder;
         }
 
-        // Handle in/notIn/exists/notExists operators with specific segment IDs
         if (!is_array($segmentIds)) {
             $segmentIds = [(int) $segmentIds];
         }
 
-        $isExclusion = in_array($operator, ['notExists', 'notIn'], true);
-
-        $sub       = $queryBuilder->createQueryBuilder();
-        $alias     = $this->generateRandomParameterName();
-        $paramName = $this->generateRandomParameterName();
-
         // Simple EXISTS query on materialized company_segments_companies table
-        $sub->select('1')
-            ->from($this->getPreTable().SegmentCompany::TABLE_NAME, $alias)
-            ->where($sub->expr()->eq($alias.'.company_id', $companiesTableAlias.'.id'))
-            ->andWhere($sub->expr()->in($alias.'.segment_id', ':'.$paramName))
-            ->andWhere($sub->expr()->eq($alias.'.manually_removed', 0));
+        $subQuery = function (array $ids) use ($queryBuilder, $companiesTableAlias): QueryBuilder {
+            $sub       = $queryBuilder->createQueryBuilder();
+            $alias     = $this->generateRandomParameterName();
+            $paramName = $this->generateRandomParameterName();
 
-        $queryBuilder->setParameter($paramName, $segmentIds, ArrayParameterType::INTEGER);
+            $sub->select('1')
+                ->from($this->getPreTable().SegmentCompany::TABLE_NAME, $alias)
+                ->where($sub->expr()->eq($alias.'.company_id', $companiesTableAlias.'.id'))
+                ->andWhere($sub->expr()->in($alias.'.segment_id', ':'.$paramName))
+                ->andWhere($sub->expr()->eq($alias.'.manually_removed', 0));
 
-        $expr = $isExclusion
-            ? $queryBuilder->expr()->notExists($sub->getSQL())
-            : $queryBuilder->expr()->exists($sub->getSQL());
+            $queryBuilder->setParameter($paramName, $ids, ArrayParameterType::INTEGER);
 
-        $queryBuilder->addLogic($expr, $filter->getGlue());
+            return $sub;
+        };
+
+        $queryBuilder->addLogic($this->buildMembershipExpression($queryBuilder, $operator, $segmentIds, $subQuery), $filter->getGlue());
 
         return $queryBuilder;
     }
@@ -143,38 +135,35 @@ final class CompanySegmentMembershipFilterQueryBuilder extends BaseFilterQueryBu
             return $queryBuilder;
         }
 
-        // Handle in/notIn/exists/notExists operators with specific segment IDs
         if (!is_array($segmentIds)) {
             $segmentIds = [(int) $segmentIds];
         }
 
-        $isExclusion = in_array($operator, ['notExists', 'notIn'], true);
-
-        $sub                  = $queryBuilder->createQueryBuilder();
-        $clAlias              = $this->generateRandomParameterName();
-        $csAlias              = $this->generateRandomParameterName();
-        $segmentIdsParam      = $this->generateRandomParameterName();
-        $isPrimaryParam       = $this->generateRandomParameterName();
-        $manuallyRemovedParam = $this->generateRandomParameterName();
-
         // EXISTS query with 2-table JOIN: companies_leads -> company_segments_companies
-        $sub->select('1')
-            ->from($this->getPreTable().'companies_leads', $clAlias)
-            ->join($clAlias, $this->getPreTable().SegmentCompany::TABLE_NAME, $csAlias, $csAlias.'.company_id = '.$clAlias.'.company_id')
-            ->where($sub->expr()->eq($clAlias.'.lead_id', $leadAlias.'.id'))
-            ->andWhere($sub->expr()->eq($clAlias.'.is_primary', ':'.$isPrimaryParam))
-            ->andWhere($sub->expr()->in($csAlias.'.segment_id', ':'.$segmentIdsParam))
-            ->andWhere($sub->expr()->eq($csAlias.'.manually_removed', ':'.$manuallyRemovedParam));
+        $subQuery = function (array $ids) use ($queryBuilder, $leadAlias): QueryBuilder {
+            $sub                  = $queryBuilder->createQueryBuilder();
+            $clAlias              = $this->generateRandomParameterName();
+            $csAlias              = $this->generateRandomParameterName();
+            $segmentIdsParam      = $this->generateRandomParameterName();
+            $isPrimaryParam       = $this->generateRandomParameterName();
+            $manuallyRemovedParam = $this->generateRandomParameterName();
 
-        $queryBuilder->setParameter($segmentIdsParam, $segmentIds, ArrayParameterType::INTEGER);
-        $queryBuilder->setParameter($isPrimaryParam, 1);
-        $queryBuilder->setParameter($manuallyRemovedParam, 0);
+            $sub->select('1')
+                ->from($this->getPreTable().'companies_leads', $clAlias)
+                ->join($clAlias, $this->getPreTable().SegmentCompany::TABLE_NAME, $csAlias, $csAlias.'.company_id = '.$clAlias.'.company_id')
+                ->where($sub->expr()->eq($clAlias.'.lead_id', $leadAlias.'.id'))
+                ->andWhere($sub->expr()->eq($clAlias.'.is_primary', ':'.$isPrimaryParam))
+                ->andWhere($sub->expr()->in($csAlias.'.segment_id', ':'.$segmentIdsParam))
+                ->andWhere($sub->expr()->eq($csAlias.'.manually_removed', ':'.$manuallyRemovedParam));
 
-        $expr = $isExclusion
-            ? $queryBuilder->expr()->notExists($sub->getSQL())
-            : $queryBuilder->expr()->exists($sub->getSQL());
+            $queryBuilder->setParameter($segmentIdsParam, $ids, ArrayParameterType::INTEGER);
+            $queryBuilder->setParameter($isPrimaryParam, 1);
+            $queryBuilder->setParameter($manuallyRemovedParam, 0);
 
-        $queryBuilder->addLogic($expr, $filter->getGlue());
+            return $sub;
+        };
+
+        $queryBuilder->addLogic($this->buildMembershipExpression($queryBuilder, $operator, $segmentIds, $subQuery), $filter->getGlue());
 
         return $queryBuilder;
     }

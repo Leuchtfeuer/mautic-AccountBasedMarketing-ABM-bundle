@@ -20,6 +20,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  */
 final class CompanyLeadSegmentMembershipFilterQueryBuilder extends BaseFilterQueryBuilder implements EventSubscriberInterface
 {
+    use MembershipOperatorExpressionTrait;
+
     public static function getServiceId(): string
     {
         return self::class;
@@ -58,33 +60,31 @@ final class CompanyLeadSegmentMembershipFilterQueryBuilder extends BaseFilterQue
             return $queryBuilder;
         }
 
-        // Handle in/notIn operators with specific segment IDs
-        $segmentIds  = $this->ensureNumericSegmentIds($filter->getParameterValue());
-        $operator    = $filter->getOperator();
-        $isExclusion = in_array($operator, ['notExists', 'notIn'], true);
+        $segmentIds = $this->ensureNumericSegmentIds($filter->getParameterValue());
+        $operator   = $filter->getOperator();
 
-        $sub             = $queryBuilder->createQueryBuilder();
-        $cl              = $this->generateRandomParameterName();
-        $lll             = $this->generateRandomParameterName();
-        $segmentIdsParam = $this->generateRandomParameterName();
-        $isPrimaryParam  = $this->generateRandomParameterName();
+        $subQuery = function (array $ids) use ($queryBuilder, $companiesTableAlias): QueryBuilder {
+            $sub             = $queryBuilder->createQueryBuilder();
+            $cl              = $this->generateRandomParameterName();
+            $lll             = $this->generateRandomParameterName();
+            $segmentIdsParam = $this->generateRandomParameterName();
+            $isPrimaryParam  = $this->generateRandomParameterName();
 
-        $sub->select('1')
-            ->from(MAUTIC_TABLE_PREFIX.'companies_leads', $cl)
-            ->join($cl, MAUTIC_TABLE_PREFIX.'lead_lists_leads', $lll, $lll.'.lead_id = '.$cl.'.lead_id')
-            ->where($sub->expr()->eq($cl.'.company_id', $companiesTableAlias.'.id'))
-            ->andWhere($sub->expr()->eq($cl.'.is_primary', ':'.$isPrimaryParam))
-            ->andWhere($sub->expr()->in($lll.'.leadlist_id', ':'.$segmentIdsParam))
-            ->andWhere($sub->expr()->eq($lll.'.manually_removed', 0));
+            $sub->select('1')
+                ->from(MAUTIC_TABLE_PREFIX.'companies_leads', $cl)
+                ->join($cl, MAUTIC_TABLE_PREFIX.'lead_lists_leads', $lll, $lll.'.lead_id = '.$cl.'.lead_id')
+                ->where($sub->expr()->eq($cl.'.company_id', $companiesTableAlias.'.id'))
+                ->andWhere($sub->expr()->eq($cl.'.is_primary', ':'.$isPrimaryParam))
+                ->andWhere($sub->expr()->in($lll.'.leadlist_id', ':'.$segmentIdsParam))
+                ->andWhere($sub->expr()->eq($lll.'.manually_removed', 0));
 
-        $queryBuilder->setParameter($segmentIdsParam, $segmentIds, ArrayParameterType::STRING);
-        $queryBuilder->setParameter($isPrimaryParam, 1);
+            $queryBuilder->setParameter($segmentIdsParam, $ids, ArrayParameterType::STRING);
+            $queryBuilder->setParameter($isPrimaryParam, 1);
 
-        $expr = $isExclusion
-            ? $queryBuilder->expr()->notExists($sub->getSQL())
-            : $queryBuilder->expr()->exists($sub->getSQL());
+            return $sub;
+        };
 
-        $queryBuilder->addLogic($expr, $filter->getGlue());
+        $queryBuilder->addLogic($this->buildMembershipExpression($queryBuilder, $operator, $segmentIds, $subQuery), $filter->getGlue());
 
         return $queryBuilder;
     }
