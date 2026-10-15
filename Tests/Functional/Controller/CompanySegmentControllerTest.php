@@ -34,12 +34,8 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
 
     public function testIndexActionDisplaysCompanySegments(): void
     {
-        $segment1 = $this->createCompanySegment('First Segment', 'first');
-        $segment2 = $this->createCompanySegment('Second Segment', 'second');
-
-        $this->em->persist($segment1);
-        $this->em->persist($segment2);
-        $this->em->flush();
+        $this->createCompanySegment('First Segment', 'first');
+        $this->createCompanySegment('Second Segment', 'second');
 
         $this->client->request(Request::METHOD_GET, '/s/company-segments');
         $response = $this->client->getResponse();
@@ -60,12 +56,10 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
      */
     public function testIndexActionDisplaysMetadata(): void
     {
-        $segment = $this->createCompanySegment('Metadata Test');
+        $segment = $this->createCompanySegment('Metadata Test', 'metadata-test');
         $segment->setDateAdded(new \DateTime('2020-02-07 20:29:02'));
         $segment->setDateModified(new \DateTime('2020-03-21 20:29:02'));
         $segment->setCreatedByUser('Test User');
-
-        $this->em->persist($segment);
         $this->em->flush();
 
         $this->client->request(Request::METHOD_GET, '/s/company-segments');
@@ -75,20 +69,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $this->assertStringContainsString('February 7, 2020', (string) $response->getContent());
         $this->assertStringContainsString('March 21, 2020', (string) $response->getContent());
         $this->assertStringContainsString('Test User', (string) $response->getContent());
-    }
-
-    private function createCompanySegment(string $name, ?string $aliasSuffix = null): CompanySegment
-    {
-        $alias = $aliasSuffix ?? strtolower(str_replace(' ', '-', $name));
-
-        $segment = new CompanySegment();
-        $segment->setName($name);
-        $segment->setPublicName($name);
-        $segment->setAlias($alias);
-        $segment->setFilters([]);
-        $segment->setIsPublished(true);
-
-        return $segment;
     }
 
     public function testNewActionDisplaysForm(): void
@@ -132,8 +112,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     public function testEditActionDisplaysForm(): void
     {
         $segment = $this->createCompanySegment('Edit Test Segment', 'edit-test');
-        $this->em->persist($segment);
-        $this->em->flush();
 
         $segmentId = $segment->getId();
         \assert(null !== $segmentId);
@@ -149,8 +127,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     public function testEditActionUpdatesSegment(): void
     {
         $segment = $this->createCompanySegment('Original Name', 'original-alias');
-        $this->em->persist($segment);
-        $this->em->flush();
 
         $segmentId = $segment->getId();
         \assert(null !== $segmentId);
@@ -182,7 +158,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     {
         $segment = $this->createCompanySegment('View Test Segment', 'view-test');
         $segment->setDescription('This is a test segment for viewing');
-        $this->em->persist($segment);
         $this->em->flush();
 
         $segmentId = $segment->getId();
@@ -249,8 +224,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     public function testDeleteActionRemovesSegment(): void
     {
         $segment = $this->createCompanySegment('Delete Test Segment', 'delete-test');
-        $this->em->persist($segment);
-        $this->em->flush();
 
         $segmentId = $segment->getId();
         \assert(null !== $segmentId);
@@ -286,11 +259,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $segment2 = $this->createCompanySegment('Batch Delete 2', 'batch-delete-2');
         $segment3 = $this->createCompanySegment('Batch Delete 3', 'batch-delete-3');
 
-        $this->em->persist($segment1);
-        $this->em->persist($segment2);
-        $this->em->persist($segment3);
-        $this->em->flush();
-
         $id1 = $segment1->getId();
         $id2 = $segment2->getId();
         $id3 = $segment3->getId();
@@ -317,7 +285,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     {
         $original = $this->createCompanySegment('Original Segment', 'original-segment');
         $original->setDescription('Original description');
-        $this->em->persist($original);
         $this->em->flush();
 
         $originalId = $original->getId();
@@ -356,18 +323,10 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     public function testCloneActionIsDeniedWithoutCreatePermission(): void
     {
         $segment = $this->createCompanySegment('Original Segment', 'original-segment');
-        $rows    = fn (): string => (string) $this->connection->fetchOne('SELECT COUNT(*) FROM '.MAUTIC_TABLE_PREFIX.'company_segments');
-        fwrite(STDERR, "\nDEBUG A after create: id=".var_export($segment->getId(), true)." rows=".$rows()."\n");
 
-        $user = $this->createUserWithListPermissions(2 | 4 | 8 | 16);
-        fwrite(STDERR, "DEBUG B after user: id=".var_export($segment->getId(), true)." rows=".$rows()."\n");
+        $this->loginOtherUser($this->createUserWithListPermissions(2 | 4 | 8 | 16));
 
-        $this->loginOtherUser($user);
-        fwrite(STDERR, "DEBUG C after login: id=".var_export($segment->getId(), true)." rows=".$rows()."\n");
-
-        $this->client->followRedirects(false);
         $this->client->request(Request::METHOD_GET, '/s/company-segments/clone/'.$segment->getId());
-        fwrite(STDERR, "DEBUG D status=".$this->client->getResponse()->getStatusCode()." location=".($this->client->getResponse()->headers->get('Location') ?? '-')."\n");
 
         $this->assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
     }
@@ -375,7 +334,6 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
     public function testIndexActionShowsOnlyOwnSegmentsWithViewOwnPermission(): void
     {
         $this->createCompanySegment('Admin Segment', 'admin-segment');
-        $this->em->flush();
 
         $this->loginOtherUser($this->createUserWithListPermissions(2));
 
