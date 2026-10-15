@@ -307,7 +307,7 @@ class CompanySegmentModel extends FormModel
     /**
      * @param iterable<CompanySegment|int> $companySegments
      */
-    public function addCompany(Company $company, iterable $companySegments, bool $manuallyAdded = false, ?\DateTimeInterface $dateTimeManipulated = null): void
+    public function addCompany(Company $company, iterable $companySegments, bool $manuallyAdded = false, ?\DateTimeInterface $dateTimeManipulated = null, bool $batchProcess = false): void
     {
         if (null === $dateTimeManipulated) {
             $dateTimeManipulated = new \DateTime();
@@ -335,7 +335,8 @@ class CompanySegmentModel extends FormModel
         $companyAddSegment = [];
         foreach ($companySegments as $companySegment) {
             assert($companySegment instanceof CompanySegment);
-            if ($companySegment->hasCompany($company)) {
+            // The rebuild query already excludes existing memberships, and the collection check would load them all.
+            if (!$batchProcess && $companySegment->hasCompany($company)) {
                 continue;
             }
 
@@ -365,7 +366,9 @@ class CompanySegmentModel extends FormModel
                 $segmentCompany->setDateAdded($dateTimeManipulated);
             }
 
-            $companySegment->addSegmentCompany($segmentCompany);
+            if (!$batchProcess) {
+                $companySegment->addSegmentCompany($segmentCompany);
+            }
 
             $companyAddSegment[] = $segmentCompany;
             if (is_int($companySegment->getId())) {
@@ -382,6 +385,11 @@ class CompanySegmentModel extends FormModel
 
         if ([] !== $companyAddSegment) {
             $this->getSegmentCompanyRepository()->saveEntities($companyAddSegment);
+        }
+
+        if ($batchProcess) {
+            $this->getSegmentCompanyRepository()->detachEntities($companyAddSegment);
+            $this->em->detach($company);
         }
     }
 
@@ -618,7 +626,7 @@ class CompanySegmentModel extends FormModel
                         continue;
                     }
 
-                    $this->addCompany($company, [$companySegment], false, $dtHelper->getLocalDateTime());
+                    $this->addCompany($company, [$companySegment], false, $dtHelper->getLocalDateTime(), true);
                     $processedCompanies[] = $company;
 
                     ++$companiesProcessed;

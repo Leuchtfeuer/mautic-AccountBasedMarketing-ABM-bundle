@@ -291,11 +291,6 @@ class CompanySegment extends FormEntity
             return;
         }
 
-        if ($this->segmentCompanies->exists(static fn (int $key, SegmentCompany $existingSegmentCompany): bool => $existingSegmentCompany->getCompanySegment() === $segmentCompany->getCompanySegment()
-            && $existingSegmentCompany->getCompany() === $segmentCompany->getCompany())) {
-            return;
-        }
-
         $this->segmentCompanies->add($segmentCompany);
     }
 
