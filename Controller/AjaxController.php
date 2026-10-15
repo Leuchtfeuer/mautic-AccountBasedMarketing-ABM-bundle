@@ -8,7 +8,6 @@ use Mautic\CoreBundle\Controller\AjaxController as CommonAjaxController;
 use Mautic\CoreBundle\Helper\InputHelper;
 use Mautic\LeadBundle\Form\Type\FilterPropertiesType;
 use Mautic\LeadBundle\Provider\FormAdjustmentsProviderInterface;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,14 +16,13 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class AjaxController extends CommonAjaxController
 {
-    private CompanySegmentRepository $companySegmentRepository;
 
+    private \MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository;
     #[\Symfony\Contracts\Service\Attribute\Required]
-    public function autowireLeuchtfeuerAccountBasedMarketingAbmAjaxController(CompanySegmentRepository $companySegmentRepository): void
+    public function autowireAjaxController(\MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository $companySegmentRepository): void
     {
         $this->companySegmentRepository = $companySegmentRepository;
     }
-
     public function loadCompanySegmentFilterFormAction(
         Request $request,
         FormFactoryInterface $formFactory,
@@ -82,7 +80,10 @@ final class AjaxController extends CommonAjaxController
         }
 
         $id = InputHelper::clean($request->query->get('id'));
-        $id = is_numeric($id) ? (int) $id : 0;
+        if(!is_numeric($id)){
+            return $this->sendJsonResponse(['html' => '0', 'companyCount' => 0], Response::HTTP_NOT_FOUND);
+        }
+        $id = (int) $id;
 
         $companyExists = 1 === $this->companySegmentRepository->count(['id' => $id]);
 
@@ -91,7 +92,7 @@ final class AjaxController extends CommonAjaxController
         }
 
         if (!$companySegmentModel->hasSegmentCompanyCountInCache($id)) {
-            $companySegmentModel->setSegmentCompanyCountInCache([$id]);
+            $companySegmentModel->refreshSegmentCompanyCountCache([$id]);
         }
 
         $companyCounts = $companySegmentModel->getSegmentCompanyCountFromCache([$id]);

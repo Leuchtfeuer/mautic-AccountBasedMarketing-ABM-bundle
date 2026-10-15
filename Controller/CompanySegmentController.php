@@ -154,7 +154,7 @@ final class CompanySegmentController extends AbstractStandardFormController
     {
         foreach ($companySegmentIds as $id) {
             if (!$model->hasSegmentCompanyCountInCache($id)) {
-                $model->setSegmentCompanyCountInCache([$id]);
+                $model->refreshSegmentCompanyCountCache([$id]);
             }
         }
     }
