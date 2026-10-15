@@ -78,7 +78,7 @@ final readonly class CompanySegmentActionModel
         return $result;
     }
 
-    public function canEditCompany(Company $company): bool
+    private function canEditCompany(Company $company): bool
     {
         return $this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $company->getPermissionUser());
     }
