@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\Controller;
 
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
+use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
 use Mautic\UserBundle\Entity\User;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
@@ -14,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 final class CompanySegmentControllerTest extends MauticMysqlTestCase
 {
     use CreateCompanySegmentTestEntitiesTrait;
+    use UserEntityTrait;
 
     protected function setUp(): void
     {
@@ -349,6 +351,67 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         // Original should still exist
         $originalStillExists = $this->em->getRepository(CompanySegment::class)->find($originalId);
         $this->assertInstanceOf(CompanySegment::class, $originalStillExists);
+    }
+
+    public function testCloneActionIsDeniedWithoutCreatePermission(): void
+    {
+        $segment = $this->createCompanySegment('Original Segment', 'original-segment');
+        $rows    = fn (): string => (string) $this->connection->fetchOne('SELECT COUNT(*) FROM '.MAUTIC_TABLE_PREFIX.'company_segments');
+        fwrite(STDERR, "\nDEBUG A after create: id=".var_export($segment->getId(), true)." rows=".$rows()."\n");
+
+        $user = $this->createUserWithListPermissions(2 | 4 | 8 | 16);
+        fwrite(STDERR, "DEBUG B after user: id=".var_export($segment->getId(), true)." rows=".$rows()."\n");
+
+        $this->loginOtherUser($user);
+        fwrite(STDERR, "DEBUG C after login: id=".var_export($segment->getId(), true)." rows=".$rows()."\n");
+
+        $this->client->followRedirects(false);
+        $this->client->request(Request::METHOD_GET, '/s/company-segments/clone/'.$segment->getId());
+        fwrite(STDERR, "DEBUG D status=".$this->client->getResponse()->getStatusCode()." location=".($this->client->getResponse()->headers->get('Location') ?? '-')."\n");
+
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testIndexActionShowsOnlyOwnSegmentsWithViewOwnPermission(): void
+    {
+        $this->createCompanySegment('Admin Segment', 'admin-segment');
+        $this->em->flush();
+
+        $this->loginOtherUser($this->createUserWithListPermissions(2));
+
+        $this->client->request(Request::METHOD_GET, '/s/company-segments');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString('Admin Segment', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testIndexActionIsDeniedWithContactPermissionsOnly(): void
+    {
+        $this->loginOtherUser($this->createUserWithPermission([
+            'email'      => 'contacts-only@test.com',
+            'user-name'  => 'contacts-only',
+            'first-name' => 'Contacts',
+            'last-name'  => 'Only',
+            'role'       => ['name' => 'Contacts only', 'permissions' => ['lead:leads' => 1024]],
+        ]));
+
+        $this->client->request(Request::METHOD_GET, '/s/company-segments');
+
+        $this->assertSame(Response::HTTP_FORBIDDEN, $this->client->getResponse()->getStatusCode());
+    }
+
+    private function createUserWithListPermissions(int $bitwise): User
+    {
+        $user = $this->createUserWithPermission([
+            'email'      => 'lists-user@test.com',
+            'user-name'  => 'lists-user',
+            'first-name' => 'Lists',
+            'last-name'  => 'User',
+            'role'       => ['name' => 'Lists role', 'permissions' => ['lead:lists' => $bitwise]],
+        ]);
+        $this->em->flush();
+
+        return $user;
     }
 
     public function testCloneActionReturnsErrorForNonExistentSegment(): void

@@ -16,7 +16,7 @@ Variables
 
 {% block actions %}
     {{ include('@MauticCore/Helper/page_actions.html.twig', {
-        'templateButtons': {'new': true},
+        'templateButtons': {'new': permissions['lead:lists:create']},
         'routeBase': constant('MauticPlugin\\LeuchtfeuerAccountBasedMarketingAbmBundle\\Model\\CompanySegmentModel::PROPERTIES_FIELD'),
         'langVar': 'company_segments',
     }) }}

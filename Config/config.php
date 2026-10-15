@@ -16,7 +16,7 @@ return [
         'main' => [
             'items' => [
                 'mautic.company_segments.menu.index' => [
-                    'access'   => ['lead:leads:viewown', 'lead:leads:viewother'],
+                    'access'   => ['lead:lists:viewown', 'lead:lists:viewother'],
                     'route'    => 'mautic_company_segments_index',
                     'parent'   => 'mautic.companies.menu.index',
                     'priority' => 15,

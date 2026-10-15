@@ -31,9 +31,9 @@ Variables
         'item': segment,
         'customButtons': customButtons|default([]),
         'templateButtons': {
-            'edit': securityHasEntityAccess(permissions['lead:leads:editown'], permissions['lead:lists:editother'], segment.createdBy),
-            'delete': securityHasEntityAccess(permissions['lead:lists:deleteother'], permissions['lead:lists:editother'], segment.createdBy),
-            'clone': securityHasEntityAccess(permissions['lead:leads:editown'], permissions['lead:lists:viewother'], segment.createdBy),
+            'edit': securityHasEntityAccess(permissions['lead:lists:editown'], permissions['lead:lists:editother'], segment.createdBy),
+            'delete': securityHasEntityAccess(permissions['lead:lists:deleteown'], permissions['lead:lists:deleteother'], segment.createdBy),
+            'clone': permissions['lead:lists:create'] and securityHasEntityAccess(permissions['lead:lists:viewown'], permissions['lead:lists:viewother'], segment.createdBy),
         },
         'routeBase': 'company_segments',
     }) -}}

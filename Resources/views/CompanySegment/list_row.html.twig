@@ -9,9 +9,9 @@ Variables
         {{ include('@MauticCore/Helper/list_actions.html.twig', {
             'item': item,
             'templateButtons': {
-                'edit': securityHasEntityAccess(true, permissions['lead:lists:editother'], item.createdBy),
-                'clone': securityHasEntityAccess(true, permissions['lead:lists:editother'], item.createdBy),
-                'delete': securityHasEntityAccess(true, permissions['lead:lists:deleteother'], item.createdBy),
+                'edit': securityHasEntityAccess(permissions['lead:lists:editown'], permissions['lead:lists:editother'], item.createdBy),
+                'clone': permissions['lead:lists:create'] and securityHasEntityAccess(permissions['lead:lists:viewown'], permissions['lead:lists:viewother'], item.createdBy),
+                'delete': securityHasEntityAccess(permissions['lead:lists:deleteown'], permissions['lead:lists:deleteother'], item.createdBy),
             },
             'routeBase': constant('MauticPlugin\\LeuchtfeuerAccountBasedMarketingAbmBundle\\Model\\CompanySegmentModel::PROPERTIES_FIELD'),
             'langVar': 'company_segments',

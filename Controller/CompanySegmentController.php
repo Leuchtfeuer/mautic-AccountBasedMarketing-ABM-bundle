@@ -7,6 +7,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller;
 use Mautic\CoreBundle\Controller\AbstractStandardFormController;
 use Mautic\CoreBundle\Exception\DeleteEntityDependencyException;
 use Mautic\CoreBundle\Security\Permissions\CorePermissions;
+use Mautic\LeadBundle\Security\Permissions\LeadPermissions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Exception\DeleteCompanySegmentsDependencyException;
@@ -24,27 +25,25 @@ final class CompanySegmentController extends AbstractStandardFormController
     {
         $this->companySegmentRepository = $companySegmentRepository;
     }
-    public const SESSION_KEY            = 'company_segments';
+    public const SESSION_KEY = 'company_segments';
 
-    private const PERMISSION_EDIT_OTHER = ':editother';
+    private const PERMISSIONS = [
+        LeadPermissions::LISTS_VIEW_OWN,
+        LeadPermissions::LISTS_VIEW_OTHER,
+        LeadPermissions::LISTS_EDIT_OWN,
+        LeadPermissions::LISTS_EDIT_OTHER,
+        LeadPermissions::LISTS_CREATE,
+        LeadPermissions::LISTS_DELETE_OWN,
+        LeadPermissions::LISTS_DELETE_OTHER,
+    ];
 
     public function indexAction(CompanySegmentModel $model, Request $request, CorePermissions $security, int $page = 1): Response
     {
-        // set some permissions
-        $permissions = $security->isGranted(
-            [
-                'lead:leads:viewown',
-                'lead:leads:viewother',
-                $this->getPermissionBase().':viewother',
-                $this->getPermissionBase().self::PERMISSION_EDIT_OTHER,
-                $this->getPermissionBase().':deleteother',
-            ],
-            'RETURN_ARRAY'
-        );
+        $permissions = $security->isGranted(self::PERMISSIONS, 'RETURN_ARRAY');
 
         \assert(is_array($permissions));
 
-        if (!(bool) ($permissions['lead:leads:viewother'] ?? false) && !(bool) ($permissions['lead:leads:viewown'] ?? false)) {
+        if (!$permissions[LeadPermissions::LISTS_VIEW_OWN] && !$permissions[LeadPermissions::LISTS_VIEW_OTHER]) {
             $this->throwAccessDenied();
         }
 
@@ -70,7 +69,7 @@ final class CompanySegmentController extends AbstractStandardFormController
 
         $tmpl = $request->isXmlHttpRequest() && 'list' === $request->query->get('tmpl') ? 'list' : 'index';
 
-        if (!$permissions[$this->getPermissionBase().':viewother']) {
+        if (!$permissions[LeadPermissions::LISTS_VIEW_OTHER]) {
             $mine            = $this->translator->trans('mautic.core.searchcommand.ismine');
             $filter['force'] = $mine;
         }
@@ -183,9 +182,9 @@ final class CompanySegmentController extends AbstractStandardFormController
             return $this->notFoundRedirect($page, $objectId);
         }
 
-        if (!$security->hasEntityAccess(
-            true, $this->getPermissionBase().self::PERMISSION_EDIT_OTHER, $segment->getCreatedBy()
-        )) {
+        if (!$security->isGranted(LeadPermissions::LISTS_CREATE)
+            || !$security->hasEntityAccess(LeadPermissions::LISTS_VIEW_OWN, LeadPermissions::LISTS_VIEW_OTHER, $segment->getCreatedBy())
+        ) {
             $this->throwAccessDenied();
         }
 
@@ -260,15 +259,7 @@ final class CompanySegmentController extends AbstractStandardFormController
             $args['viewParameters']['security']        = $this->security;
             $args['viewParameters']['translationBase'] = $this->getTranslationBase();
             $args['viewParameters']['permissionBase']  = $this->getPermissionBase();
-            $args['viewParameters']['permissions']     = $this->security->isGranted(
-                [
-                    'lead:leads:editown',
-                    $this->getPermissionBase().':viewother',
-                    $this->getPermissionBase().self::PERMISSION_EDIT_OTHER,
-                    $this->getPermissionBase().':deleteother',
-                ],
-                'RETURN_ARRAY'
-            );
+            $args['viewParameters']['permissions']     = $this->security->isGranted(self::PERMISSIONS, 'RETURN_ARRAY');
         }
 
         return $args;
