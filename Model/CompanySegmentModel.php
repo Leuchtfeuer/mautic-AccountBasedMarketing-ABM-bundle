@@ -773,50 +773,70 @@ class CompanySegmentModel extends FormModel
     }
 
     /**
-     * @return array<int, mixed>
+     * @return array<int, string>
      */
-    public function getSegmentsWithDependenciesOnSegment(int $segmentId, string $returnProperty = 'name', bool $isContactSegment = false): array
+    public function getCompanySegmentsDependingOnCompanySegment(int $id): array
     {
-        $tableAlias = $isContactSegment
-            ? $this->leadListRepository->getTableAlias()
-            : $this->getRepository()->getTableAlias();
+        $entities = $this->getEntities(['filter' => $this->getDependencyFilter(
+            $this->getRepository()->getTableAlias(),
+            $this->getLikeQueryCompanySegment(),
+            $id
+        )]);
 
-        $filter = [
+        return $this->extractDependentSegmentNames($entities, $id);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getContactSegmentsDependingOnCompanySegment(int $id): array
+    {
+        $entities = $this->listModel->getEntities(['filter' => $this->getDependencyFilter(
+            $this->leadListRepository->getTableAlias(),
+            '%"type";s:16:"company_segments"%',
+            $id
+        )]);
+
+        return $this->extractDependentSegmentNames($entities, $id);
+    }
+
+    /**
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function getDependencyFilter(string $tableAlias, string $likeValue, int $id): array
+    {
+        return [
             'force' => [
                 [
                     'column' => $tableAlias.'.filters',
                     'expr'   => 'LIKE',
-                    'value'  => $isContactSegment
-                        ? '%"type";s:16:"company_segments"%'
-                        : $this->getLikeQueryCompanySegment(),
+                    'value'  => $likeValue,
                 ],
                 [
                     'column' => $tableAlias.'.id',
                     'expr'   => 'neq',
-                    'value'  => $segmentId,
+                    'value'  => $id,
                 ],
             ],
         ];
+    }
 
-        $entities = $isContactSegment
-            ? $this->listModel->getEntities(['filter' => $filter])
-            : $this->getEntities(['filter' => $filter]);
+    /**
+     * @param iterable<CompanySegment|LeadList> $entities
+     *
+     * @return array<int, string>
+     */
+    private function extractDependentSegmentNames(iterable $entities, int $id): array
+    {
         $dependents = [];
-        $accessor   = PropertyAccess::createPropertyAccessor();
         foreach ($entities as $entity) {
-            assert($entity instanceof CompanySegment || $entity instanceof LeadList);
-            $retrFilters = $entity->getFilters();
-            foreach ($retrFilters as $eachFilter) {
+            foreach ($entity->getFilters() as $eachFilter) {
                 if (!is_array($eachFilter) || !array_key_exists('properties', $eachFilter) || !is_array($eachFilter['properties']) || !array_key_exists('filter', $eachFilter['properties'])) {
                     continue;
                 }
                 $filter = $eachFilter['properties']['filter'];
-                if (is_array($filter) && self::PROPERTIES_FIELD === $eachFilter['type'] && in_array($segmentId, $filter, true)) {
-                    $value = $accessor->getValue($entity, $returnProperty);
-                    if (('id' !== $returnProperty && !is_string($value)) || ('id' === $returnProperty && !is_numeric($value))) {
-                        continue;
-                    }
-                    $dependents[] = $value;
+                if (is_array($filter) && self::PROPERTIES_FIELD === $eachFilter['type'] && in_array($id, $filter, true)) {
+                    $dependents[] = (string) $entity->getName();
                     break;
                 }
             }

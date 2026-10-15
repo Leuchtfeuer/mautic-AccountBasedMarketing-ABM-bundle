@@ -40,7 +40,7 @@ final readonly class CompanySegmentSubscriber implements EventSubscriberInterfac
         }
 
         // Check for dependencies in other company segments
-        $dependentCompanySegments = $this->companySegmentModel->getSegmentsWithDependenciesOnSegment($id, 'name');
+        $dependentCompanySegments = $this->companySegmentModel->getCompanySegmentsDependingOnCompanySegment($id);
         if ([] !== $dependentCompanySegments) {
             $event->addDependencyError($this->translator->trans(
                 'mautic.company_segments.error.cannot.delete.inuse',
@@ -50,7 +50,7 @@ final readonly class CompanySegmentSubscriber implements EventSubscriberInterfac
         }
 
         // Check for dependencies in contact segments
-        $dependentContactSegments = $this->companySegmentModel->getSegmentsWithDependenciesOnSegment($id, 'name', true);
+        $dependentContactSegments = $this->companySegmentModel->getContactSegmentsDependingOnCompanySegment($id);
         if ([] !== $dependentContactSegments) {
             $event->addDependencyError($this->translator->trans(
                 'mautic.company_segments.segment.error.cannot.delete.inuse',
