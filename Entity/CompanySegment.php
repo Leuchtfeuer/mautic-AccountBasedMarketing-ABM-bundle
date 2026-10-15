@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity;
 
-use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Delete;
-use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\GetCollection;
-use ApiPlatform\Metadata\Patch;
-use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Put;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -25,26 +18,6 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Validator\Constraints
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Mapping\ClassMetadata;
 
-#[ApiResource(
-    shortName: 'CompanySegments',
-    operations: [
-        new GetCollection(uriTemplate: '/companysegments', security: "is_granted('lead:lists:viewown')"),
-        new Post(uriTemplate: '/companysegments', security: "is_granted('lead:lists:create')"),
-        new Get(uriTemplate: '/companysegments/{id}', security: "is_granted('lead:lists:viewown', object)"),
-        new Put(uriTemplate: '/companysegments/{id}', security: "is_granted('lead:lists:editown', object)"),
-        new Patch(uriTemplate: '/companysegments/{id}', security: "is_granted('lead:lists:editother', object)"),
-        new Delete(uriTemplate: '/companysegments/{id}', security: "is_granted('lead:lists:deleteown', object)"),
-    ],
-    normalizationContext: [
-        'groups'                  => ['companysegment:read'],
-        'swagger_definition_name' => 'Read',
-        'api_included'            => ['category'],
-    ],
-    denormalizationContext: [
-        'groups'                  => ['companysegment:write'],
-        'swagger_definition_name' => 'Write',
-    ]
-)]
 class CompanySegment extends FormEntity
 {
     public const TABLE_NAME    = 'company_segments';

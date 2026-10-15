@@ -18,7 +18,6 @@ final readonly class IntegrationGuardSubscriber implements EventSubscriberInterf
     private const ROUTE_PREFIXES = [
         'mautic_company_segments_',
         'mautic_api_companysegment',
-        '_api_/companysegments',
     ];
 
     private const AJAX_ACTION_PREFIX = 'plugin:leuchtfeuerAccountBasedMarketingAbm:';
