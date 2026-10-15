@@ -14,7 +14,7 @@ return function (ContainerConfigurator $configurator): void {
         ->autoconfigure()
         ->public();
 
-    $excludes = [];
+    $excludes = ['Segment/Decorator'];
     $services->load('MauticPlugin\\LeuchtfeuerAccountBasedMarketingAbmBundle\\', '../')
         ->exclude('../{'.implode(',', array_merge(MauticCoreExtension::DEFAULT_EXCLUDES, $excludes)).'}');
 

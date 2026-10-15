@@ -12,6 +12,7 @@ use Mautic\LeadBundle\Segment\Exception\SegmentQueryException;
 use Mautic\LeadBundle\Segment\Query\QueryBuilder;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener\CompanySegmentDecoratorSubscriber;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Segment\Query\CompanyBatchLimiterTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Segment\Query\CompanySegmentQueryBuilder;
 use Psr\Log\LoggerInterface;
@@ -24,6 +25,7 @@ final class CompanySegmentService
         private ContactSegmentFilterFactory $contactSegmentFilterFactory,
         private CompanySegmentQueryBuilder $companySegmentQueryBuilder,
         private LoggerInterface $logger,
+        private CompanySegmentDecoratorSubscriber $decoratorSubscriber,
     ) {
     }
 
@@ -275,7 +277,13 @@ final class CompanySegmentService
         $leadList = new LeadList();
         $leadList->setFilters($filters);
 
-        return $this->contactSegmentFilterFactory->getSegmentFilters($leadList, $batchLimiters);
+        $this->decoratorSubscriber->setBuildingCompanySegment(true);
+
+        try {
+            return $this->contactSegmentFilterFactory->getSegmentFilters($leadList, $batchLimiters);
+        } finally {
+            $this->decoratorSubscriber->setBuildingCompanySegment(false);
+        }
     }
 
     private function formatPeriod(float $inputSeconds): string
