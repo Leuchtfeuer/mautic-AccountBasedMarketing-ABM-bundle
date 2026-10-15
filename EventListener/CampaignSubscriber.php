@@ -84,6 +84,12 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
         $addTo      = $properties['addToLists'] ?? [];
         $removeFrom = $properties['removeFromLists'] ?? [];
 
+        if ([] === $addTo && [] === $removeFrom) {
+            $event->failAll('No segments to add or remove');
+
+            return;
+        }
+
         $logs = $event->getPending();
 
         foreach ($logs as $log) {
@@ -103,17 +109,13 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
                 continue;
             }
 
-            $somethingHappened = false;
-
             try {
-                if (!empty($addTo)) {
+                if ([] !== $addTo) {
                     $this->companySegmentModel->addCompany($companyEntity, $addTo, true);
-                    $somethingHappened = true;
                 }
 
-                if (!empty($removeFrom)) {
+                if ([] !== $removeFrom) {
                     $this->companySegmentModel->removeCompany($companyEntity, $removeFrom, true);
-                    $somethingHappened = true;
                 }
             } catch (\Throwable $exception) {
                 $event->fail($log, $exception->getMessage());
@@ -121,11 +123,7 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
                 continue;
             }
 
-            if ($somethingHappened) {
-                $event->pass($log);
-            } else {
-                $event->fail($log, 'No segments to add or remove');
-            }
+            $event->pass($log);
         }
     }
 
