@@ -42,13 +42,13 @@ final class DwcEntryFiltersTypeExtension extends AbstractTypeExtension
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         // Extension listeners run after the type listeners, so this replaces
         // the filter child built by the core FilterTrait.
         $formModifier = function (FormEvent $event, string $eventName): void {
-            if (!$this->config->isPublished()) {
-                return;
-            }
-
             $data = $event->getData();
             $form = $event->getForm();
 
