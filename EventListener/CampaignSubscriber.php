@@ -6,7 +6,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use Mautic\CampaignBundle\CampaignEvents;
 use Mautic\CampaignBundle\Event\CampaignBuilderEvent;
-use Mautic\CampaignBundle\Event\CampaignExecutionEvent;
+use Mautic\CampaignBundle\Event\ConditionEvent;
 use Mautic\CampaignBundle\Event\PendingEvent;
 use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\LeadEvents;
@@ -127,7 +127,7 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
         }
     }
 
-    public function onCampaignTriggerCondition(CampaignExecutionEvent $event): void
+    public function onCampaignTriggerCondition(ConditionEvent $event): void
     {
         if (!$this->config->isPublished()) {
             return;
@@ -140,12 +140,16 @@ final readonly class CampaignSubscriber implements EventSubscriberInterface
         $lead = $event->getLead();
 
         if (!$lead || !$lead->getId()) {
-            $event->setResult(false);
+            $event->fail();
 
             return;
         }
 
-        $event->setResult($this->checkCompanySegmentMembership($lead, $event->getConfig()['companySegments'] ?? []));
+        if ($this->checkCompanySegmentMembership($lead, $event->getConfig()['companySegments'] ?? [])) {
+            $event->pass();
+        } else {
+            $event->fail();
+        }
     }
 
     /**
