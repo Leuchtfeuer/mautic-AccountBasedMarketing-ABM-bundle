@@ -59,12 +59,7 @@ Mautic.company_segmentsOnLoad = function(container, response) {
 
         mQuery('#' + prefix + '_filters .copy-filter-group').each(function(index, el) {
             mQuery(el).on('click', function() {
-                const filterRow = mQuery(this).closest('.filter--row');
-                const clonedFilter = filterRow.clone(true);
-
-                clonedFilter.insertAfter(filterRow);
-
-                Mautic.reorderCompanySegmentFilters();
+                Mautic.cloneCompanySegmentFilter(mQuery(this).closest('.filter--row'));
             });
         });
 
@@ -147,12 +142,7 @@ Mautic.addCompanySegmentsFilter = function (elId, elObj) {
     });
 
     prototype.find('a.copy-filter-group').on('click', function() {
-        const filterRow = mQuery(this).closest('.filter--row');
-        const clonedFilter = filterRow.clone(true);
-
-        clonedFilter.insertAfter(filterRow);
-
-        Mautic.reorderCompanySegmentFilters();
+        Mautic.cloneCompanySegmentFilter(mQuery(this).closest('.filter--row'));
     });
 
     const filterTypeIcon = filterOption.data('field-icon');
@@ -199,6 +189,23 @@ Mautic.attachJsUiOnCompanySegmentsFilterForms = function() {
     mQuery('#company_segments_filters .filter--row').each(function() {
         Mautic.triggerOnCompanySegmentPropertiesFormLoadedEvent('#' + mQuery(this).attr('id'));
     });
+};
+
+Mautic.cloneCompanySegmentFilter = function(filterRow) {
+    // Chosen widgets and their jQuery data must not be cloned; the reorder re-creates them.
+    filterRow.find('.properties-form select').each(function() {
+        Mautic.destroyChosen(mQuery(this));
+    });
+
+    // Selected options are not cloned unless they carry the selected attribute.
+    filterRow.find('.properties-form select option').each(function() {
+        mQuery(this).attr('selected', mQuery(this).is(':selected') ? 'selected' : null);
+    });
+
+    // Append to the end of the list, like lead segments do.
+    filterRow.clone(true).appendTo(filterRow.closest('.selected-filters'));
+
+    Mautic.reorderCompanySegmentFilters();
 };
 
 Mautic.reorderCompanySegmentFilters = function() {
@@ -250,6 +257,9 @@ Mautic.reorderCompanySegmentFilters = function() {
 
         ++counter;
     });
+
+    // Keep the next filter index in sync with the renumbered rows
+    mQuery('.available-filters').data('index', counter);
 
     // Update visibility of "when" vs "and/or" selectors
     mQuery('#' + prefix + '_filters .filter--condition').removeClass('hide');
