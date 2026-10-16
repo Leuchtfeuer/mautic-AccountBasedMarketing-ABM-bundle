@@ -33,11 +33,41 @@ final class IntegrationGuardSubscriberFunctionalTest extends MauticMysqlTestCase
 
     public function testAjaxActionIsNotFoundWhenIntegrationIsUnpublished(): void
     {
-        $this->publishAbmIntegration(false);
+        $segmentId = $this->createSegmentAndUnpublishIntegration();
 
-        $this->client->request(Request::METHOD_GET, '/s/ajax?action=plugin:leuchtfeuerAccountBasedMarketingAbm:getCompaniesCount&id=1');
+        $this->client->request(Request::METHOD_GET, '/s/ajax?action=plugin:leuchtfeuerAccountBasedMarketingAbm:getCompaniesCount&id='.$segmentId, [], [], $this->createAjaxHeaders());
 
         $this->assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testAjaxActionWithUppercaseBundleNameIsNotFoundWhenIntegrationIsUnpublished(): void
+    {
+        $segmentId = $this->createSegmentAndUnpublishIntegration();
+
+        $this->client->request(Request::METHOD_GET, '/s/ajax?action=plugin:LeuchtfeuerAccountBasedMarketingAbm:getCompaniesCount&id='.$segmentId, [], [], $this->createAjaxHeaders());
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testAjaxActionInPostBodyIsNotFoundWhenQueryActionIsEmpty(): void
+    {
+        $segmentId = $this->createSegmentAndUnpublishIntegration();
+
+        $this->client->request(Request::METHOD_POST, '/s/ajax?action=&id='.$segmentId, [
+            'action' => 'plugin:leuchtfeuerAccountBasedMarketingAbm:getCompaniesCount',
+        ], [], $this->createAjaxHeaders());
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testAjaxActionIsReachableWhenIntegrationIsPublished(): void
+    {
+        $this->publishAbmIntegration();
+        $segmentId = $this->createCompanySegment('Guard Segment', 'guard-segment')->getId();
+
+        $this->client->request(Request::METHOD_GET, '/s/ajax?action=plugin:leuchtfeuerAccountBasedMarketingAbm:getCompaniesCount&id='.$segmentId, [], [], $this->createAjaxHeaders());
+
+        $this->assertResponseIsSuccessful();
     }
 
     public function testUiRouteIsReachableWhenIntegrationIsPublished(): void
@@ -47,5 +77,15 @@ final class IntegrationGuardSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->client->request(Request::METHOD_GET, '/s/company-segments/1');
 
         $this->assertResponseIsSuccessful();
+    }
+
+    private function createSegmentAndUnpublishIntegration(): int
+    {
+        $this->publishAbmIntegration();
+        $segmentId = $this->createCompanySegment('Guard Segment', 'guard-segment')->getId();
+        $this->assertNotNull($segmentId);
+        $this->publishAbmIntegration(false);
+
+        return $segmentId;
     }
 }

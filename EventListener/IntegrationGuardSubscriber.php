@@ -6,6 +6,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -42,9 +43,8 @@ final readonly class IntegrationGuardSubscriber implements EventSubscriberInterf
 
         $request = $event->getRequest();
         $route   = (string) $request->attributes->get('_route');
-        $action  = (string) ($request->query->get('action') ?? $request->request->get('action') ?? '');
 
-        if (!$this->isPluginRoute($route) && !str_starts_with($action, self::AJAX_ACTION_PREFIX)) {
+        if (!$this->isPluginRoute($route) && !$this->isPluginAjaxAction($request)) {
             return;
         }
 
@@ -53,6 +53,16 @@ final readonly class IntegrationGuardSubscriber implements EventSubscriberInterf
         }
 
         throw new NotFoundHttpException();
+    }
+
+    private function isPluginAjaxAction(Request $request): bool
+    {
+        $action = $request->query->get('action');
+        if (empty($action)) {
+            $action = $request->request->get('action');
+        }
+
+        return is_string($action) && str_starts_with(strtolower($action), strtolower(self::AJAX_ACTION_PREFIX));
     }
 
     private function isPluginRoute(string $route): bool
