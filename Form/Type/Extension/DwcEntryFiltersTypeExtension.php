@@ -6,6 +6,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\Exten
 
 use Mautic\CoreBundle\Form\Type\DynamicContentFilterEntryFiltersType;
 use Mautic\DynamicContentBundle\Form\Type\DwcEntryFiltersType;
+use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\Form\AbstractTypeExtension;
@@ -80,7 +81,12 @@ final class DwcEntryFiltersTypeExtension extends AbstractTypeExtension
                     'data'                      => $filter,
                     'error_bubbling'            => false,
                     'choices'                   => $options['companySegments'] ?? [],
-                    'multiple'                  => in_array($operator, ['in', '!in'], true),
+                    'multiple'                  => in_array($operator, [
+                        OperatorOptions::INCLUDING_ANY,
+                        OperatorOptions::EXCLUDING_ANY,
+                        OperatorOptions::INCLUDING_ALL,
+                        OperatorOptions::EXCLUDING_ALL,
+                    ], true),
                     'choice_translation_domain' => false,
                 ]
             );
