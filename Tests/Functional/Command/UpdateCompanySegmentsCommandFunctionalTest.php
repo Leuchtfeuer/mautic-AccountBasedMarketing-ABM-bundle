@@ -13,7 +13,9 @@ use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Entity\LeadList;
 use Mautic\LeadBundle\Entity\LeadListRepository;
 use Mautic\LeadBundle\Entity\ListLead;
+use Mautic\LeadBundle\Model\CompanyModel;
 use Mautic\LeadBundle\Model\ListModel;
+use Mautic\LeadBundle\Tests\Traits\LeadFieldTestTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Command\UpdateCompanySegmentsCommand;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
@@ -23,6 +25,7 @@ final class UpdateCompanySegmentsCommandFunctionalTest extends MauticMysqlTestCa
 {
     use CreateTestEntitiesTrait;
     use CreateCompanySegmentTestEntitiesTrait;
+    use LeadFieldTestTrait;
 
     protected function setUp(): void
     {
@@ -531,6 +534,61 @@ final class UpdateCompanySegmentsCommandFunctionalTest extends MauticMysqlTestCa
         $companyNames = array_map(fn (SegmentCompany $cs) => $cs->getCompany()->getName(), $companiesInNotEmptySegment);
         $this->assertContains('leadsegment1', $companyNames);
         $this->assertContains('leadsegment2', $companyNames);
+    }
+
+    public function testEmptyDateFilterRespectsOrGlue(): void
+    {
+        $this->createField(['alias' => 'contract_date', 'type' => 'date', 'object' => 'company']);
+
+        $companyModel = self::getContainer()->get(CompanyModel::class);
+        \assert($companyModel instanceof CompanyModel);
+
+        $expected = [];
+        foreach ([
+            ['DE with date', 'Germany', '2026-01-01', true],
+            ['DE no date', 'Germany', null, true],
+            ['FR no date', 'France', null, true],
+            ['FR with date', 'France', '2026-01-01', false],
+        ] as [$name, $country, $date, $isExpected]) {
+            $company = new Company();
+            $company->setName($name);
+            $company->addUpdatedField('companycountry', $country);
+            $company->addUpdatedField('contract_date', $date);
+            $companyModel->saveEntity($company);
+            if ($isExpected) {
+                $expected[] = $company->getId();
+            }
+        }
+
+        $segment = $this->createCompanySegment('DE or no contract', 'de_or_no_contract', true, [
+            [
+                'glue'       => 'and',
+                'field'      => 'companycountry',
+                'object'     => 'company',
+                'type'       => 'country',
+                'operator'   => '=',
+                'properties' => ['filter' => 'Germany'],
+            ],
+            [
+                'glue'       => 'or',
+                'field'      => 'contract_date',
+                'object'     => 'company',
+                'type'       => 'date',
+                'operator'   => 'empty',
+                'properties' => ['filter' => null],
+            ],
+        ]);
+
+        $this->testSymfonyCommand(UpdateCompanySegmentsCommand::NAME, ['--bypass-locking' => true]);
+
+        $members = array_map(
+            static fn (SegmentCompany $segmentCompany): int => (int) $segmentCompany->getCompany()->getId(),
+            $this->em->getRepository(SegmentCompany::class)->findBy(['companySegment' => $segment])
+        );
+        sort($members);
+        sort($expected);
+
+        $this->assertSame($expected, $members);
     }
 
     public function testExcludeCompanySegmentIdSkipsExcludedSegment(): void

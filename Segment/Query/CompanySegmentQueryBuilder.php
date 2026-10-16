@@ -332,7 +332,7 @@ final class CompanySegmentQueryBuilder
             $expression = $expr->isNotNull($field);
         }
 
-        $queryBuilder->andWhere($expression);
+        $queryBuilder->addLogic($expression, $filter->getGlue());
 
         return true;
     }
