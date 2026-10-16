@@ -785,11 +785,21 @@ class CompanySegmentModel extends FormModel
      */
     public function getCompanySegmentsDependingOnCompanySegment(int $id): array
     {
-        $entities = $this->getEntities(['filter' => $this->getDependencyFilter(
-            $this->getRepository()->getTableAlias(),
-            $this->getLikeQueryCompanySegment(),
-            $id
-        )]);
+        $tableAlias = $this->getRepository()->getTableAlias();
+        $entities   = $this->getEntities(['filter' => [
+            'force' => [
+                [
+                    'column' => $tableAlias.'.filters',
+                    'expr'   => 'LIKE',
+                    'value'  => $this->getLikeQueryCompanySegment(),
+                ],
+                [
+                    'column' => $tableAlias.'.id',
+                    'expr'   => 'neq',
+                    'value'  => $id,
+                ],
+            ],
+        ]]);
 
         return $this->extractDependentSegmentNames($entities, $id);
     }
@@ -799,34 +809,17 @@ class CompanySegmentModel extends FormModel
      */
     public function getContactSegmentsDependingOnCompanySegment(int $id): array
     {
-        $entities = $this->listModel->getEntities(['filter' => $this->getDependencyFilter(
-            $this->leadListRepository->getTableAlias(),
-            '%"type";s:16:"company_segments"%',
-            $id
-        )]);
-
-        return $this->extractDependentSegmentNames($entities, $id);
-    }
-
-    /**
-     * @return array<string, array<int, array<string, mixed>>>
-     */
-    private function getDependencyFilter(string $tableAlias, string $likeValue, int $id): array
-    {
-        return [
+        $entities = $this->listModel->getEntities(['filter' => [
             'force' => [
                 [
-                    'column' => $tableAlias.'.filters',
+                    'column' => $this->leadListRepository->getTableAlias().'.filters',
                     'expr'   => 'LIKE',
-                    'value'  => $likeValue,
-                ],
-                [
-                    'column' => $tableAlias.'.id',
-                    'expr'   => 'neq',
-                    'value'  => $id,
+                    'value'  => '%"type";s:16:"company_segments"%',
                 ],
             ],
-        ];
+        ]]);
+
+        return $this->extractDependentSegmentNames($entities, $id);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functiona
 
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
+use Mautic\LeadBundle\Entity\LeadList;
 use Mautic\UserBundle\Entity\User;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
@@ -423,6 +424,49 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $this->em->clear();
         $segment = $this->em->getRepository(CompanySegment::class)->find($baseSegment->getId());
         $this->assertInstanceOf(CompanySegment::class, $segment);
+    }
+
+    public function testCannotDeleteSegmentRequiredByContactSegmentWithSameId(): void
+    {
+        $this->loginAdminUser();
+
+        $companySegment = new CompanySegment();
+        $companySegment->setName('Company Segment');
+        $companySegment->setAlias('company-segment');
+        $companySegment->setPublicName('Company Segment');
+        $companySegment->setIsPublished(true);
+        $this->em->persist($companySegment);
+        $this->em->flush();
+
+        $contactSegment = new LeadList();
+        $contactSegment->setName('Contact Segment');
+        $contactSegment->setAlias('contact-segment');
+        $contactSegment->setPublicName('Contact Segment');
+        $contactSegment->setIsPublished(true);
+        $contactSegment->setFilters([
+            [
+                'glue'       => 'and',
+                'field'      => 'company_segments',
+                'object'     => 'company',
+                'type'       => 'company_segments',
+                'operator'   => 'in',
+                'properties' => ['filter' => [$companySegment->getId()]],
+            ],
+        ]);
+        $this->em->persist($contactSegment);
+        $this->em->flush();
+
+        // Force the contact segment onto the same ID as the company segment.
+        $this->connection->executeStatement(
+            'UPDATE '.MAUTIC_TABLE_PREFIX.'lead_lists SET id = ? WHERE id = ?',
+            [$companySegment->getId(), $contactSegment->getId()]
+        );
+
+        $crawler = $this->client->request(Request::METHOD_POST, '/s/company-segments/delete/'.$companySegment->getId());
+        $this->assertStringContainsString('cannot be deleted, it is required by', $crawler->text());
+
+        $this->em->clear();
+        $this->assertInstanceOf(CompanySegment::class, $this->em->getRepository(CompanySegment::class)->find($companySegment->getId()));
     }
 
     public function testCannotBatchDeleteSegmentsWithDependencies(): void
