@@ -6,6 +6,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functiona
 
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\CoreBundle\Tests\Functional\CreateTestEntitiesTrait;
+use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\DomCrawler\Crawler;
@@ -16,6 +17,7 @@ final class BatchCompanySegmentControllerTest extends MauticMysqlTestCase
 {
     use CreateTestEntitiesTrait;
     use CreateCompanySegmentTestEntitiesTrait;
+    use UserEntityTrait;
 
     protected function setUp(): void
     {
@@ -160,6 +162,42 @@ final class BatchCompanySegmentControllerTest extends MauticMysqlTestCase
 
         $payload                          = $this->buildBatchPayload($segmentId, $companyId);
         $payload['company_batch']['add']  = [$segmentId + 999];
+
+        $this->client->request(Request::METHOD_POST, '/s/company-segments/batch/company/set', $payload);
+
+        $this->assertBatchRejected($segmentId);
+    }
+
+    public function testUserWithoutViewOtherCannotUseForeignSegments(): void
+    {
+        [$segmentId, $companyId] = $this->createSegmentAndCompany();
+
+        // Segment is owned by admin; this user may edit contacts but only view own segments.
+        $this->loginOtherUser($this->createUserWithPermission([
+            'email'      => 'own-lists@test.com',
+            'user-name'  => 'own-lists',
+            'first-name' => 'Own',
+            'last-name'  => 'Lists',
+            'role'       => ['name' => 'Own lists', 'permissions' => ['lead:leads' => 1024, 'lead:lists' => 2]],
+        ]));
+
+        $this->client->request(Request::METHOD_GET, '/s/company-segments/batch/company/view', [], [], $this->createAjaxHeaders());
+        $this->assertResponseIsSuccessful();
+
+        $content = $this->client->getResponse()->getContent();
+        $this->assertNotFalse($content);
+        $html = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($html);
+        $this->assertIsString($html['newContent']);
+
+        $crawler = new Crawler($html['newContent'], 'http://localhost/s/company-segments/batch/company/view');
+        $this->assertCount(0, $crawler->filter('select[name="company_batch[add][]"] option'));
+
+        $form    = $crawler->filter('form[name=company_batch]')->form();
+        $payload = $form->getPhpValues();
+        $this->assertIsArray($payload['company_batch']);
+        $payload['company_batch']['add'] = [$segmentId];
+        $payload['company_batch']['ids'] = json_encode([$companyId], JSON_THROW_ON_ERROR);
 
         $this->client->request(Request::METHOD_POST, '/s/company-segments/batch/company/set', $payload);
 

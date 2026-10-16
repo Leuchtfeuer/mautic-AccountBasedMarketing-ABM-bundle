@@ -43,7 +43,7 @@ final readonly class ButtonSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if (!$this->security->isGranted('lead:leads:editother')) {
+        if (true !== $this->security->isGranted(['lead:leads:editown', 'lead:leads:editother'], 'MATCH_ONE')) {
             return;
         }
 

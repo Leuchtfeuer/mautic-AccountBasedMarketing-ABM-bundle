@@ -7,13 +7,14 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller;
 use Mautic\CoreBundle\Controller\AbstractFormController;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\CompanyBatchType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentActionModel;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 final class BatchCompanySegmentController extends AbstractFormController
 {
-    public function setAction(CompanySegmentActionModel $segmentActionModel, Request $request): JsonResponse
+    public function setAction(CompanySegmentActionModel $segmentActionModel, CompanySegmentModel $companySegmentModel, Request $request): JsonResponse
     {
         if (true !== $this->security->isGranted(['lead:leads:editown', 'lead:leads:editother'], 'MATCH_ONE')) {
             $this->throwAccessDenied();
@@ -43,12 +44,14 @@ final class BatchCompanySegmentController extends AbstractFormController
             }
         }
 
-        if ([] !== $companyIds && is_array($companyIds)) {
-            /** @var array<int> $segmentsToAdd */
-            $segmentsToAdd    = $params['add'] ?? [];
-            /** @var array<int> $segmentsToRemove */
-            $segmentsToRemove = $params['remove'] ?? [];
+        /** @var array<int> $segmentsToAdd */
+        $segmentsToAdd    = $params['add'] ?? [];
+        /** @var array<int> $segmentsToRemove */
+        $segmentsToRemove = $params['remove'] ?? [];
 
+        $this->denyUnlessSegmentsArePermitted([...$segmentsToAdd, ...$segmentsToRemove], $companySegmentModel);
+
+        if ([] !== $companyIds && is_array($companyIds)) {
             if (is_array($segmentsToAdd) && [] !== $segmentsToAdd) {
                 $segmentActionModel->addCompanies($companyIds, $segmentsToAdd);
             }
@@ -68,6 +71,20 @@ final class BatchCompanySegmentController extends AbstractFormController
             'closeModal' => true,
             'flashes'    => $this->getFlashContent(),
         ]);
+    }
+
+    /**
+     * @param array<int> $segmentIds
+     */
+    private function denyUnlessSegmentsArePermitted(array $segmentIds, CompanySegmentModel $companySegmentModel): void
+    {
+        $permittedSegments = $companySegmentModel->getCompanySegments();
+
+        foreach ($segmentIds as $segmentId) {
+            if (!isset($permittedSegments[$segmentId])) {
+                $this->throwAccessDenied();
+            }
+        }
     }
 
     public function indexAction(): Response
