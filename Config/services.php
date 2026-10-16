@@ -35,4 +35,8 @@ return function (ContainerConfigurator $configurator): void {
     // Registers the companysegment search command on the company repository.
     $services->set(MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanyModelDecorated::class)
         ->decorate(Mautic\LeadBundle\Model\CompanyModel::class);
+
+    // Keeps a listener's negative DWC filter result instead of falling back to core matching.
+    $services->set(MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Helper\DynamicContentHelperDecorated::class)
+        ->decorate('mautic.helper.dynamicContent');
 };

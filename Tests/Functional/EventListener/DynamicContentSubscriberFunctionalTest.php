@@ -389,6 +389,51 @@ final class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->assertStringContainsString('Not All Segments Content', (string) $response->getContent());
     }
 
+    public function testLeadDoesNotSeeContentWhenEmailMatchesButCompanyIsNotInSegment(): void
+    {
+        $companySegment = $this->createCompanySegment('VIP Companies', 'vip-companies');
+
+        $company = $this->createCompany('Regular Corp');
+
+        $lead = $this->createLead('jane@regular.com', 'Jane');
+        $this->addLeadToCompany($lead, $company, true);
+
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
+        $contactTracker->setSystemContact($lead);
+
+        $filters = [
+            [
+                'glue'     => 'and',
+                'field'    => 'email',
+                'object'   => 'lead',
+                'type'     => 'email',
+                'filter'   => 'jane@regular.com',
+                'display'  => null,
+                'operator' => '=',
+            ],
+            [
+                'glue'     => 'and',
+                'field'    => 'company_segments',
+                'object'   => 'company_segments',
+                'type'     => 'company_segments',
+                'filter'   => [$companySegment->getId()],
+                'display'  => null,
+                'operator' => 'in',
+            ],
+        ];
+        $dynamicContent = $this->createDynamicContentWithFilter($filters, 'Mixed Filter Content');
+
+        $page = $this->createPage($dynamicContent);
+
+        $this->logoutUser();
+
+        $this->client->request(Request::METHOD_GET, sprintf('/%s?contactId=%d', $page->getAlias(), $lead->getId()));
+
+        $response = $this->client->getResponse();
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString('Mixed Filter Content', (string) $response->getContent());
+    }
+
     /**
      * Helper: Create DynamicContent with company_segments filters.
      *
