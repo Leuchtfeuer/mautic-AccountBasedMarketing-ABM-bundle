@@ -423,7 +423,7 @@ final class UpdateCompanySegmentsCommandFunctionalTest extends MauticMysqlTestCa
                 'glue'       => 'and',
                 'operator'   => $operator,
                 'properties' => [
-                    'filter' => array_map(fn (CompanySegment $segment) => $segment->getId(), $segments),
+                    'filter' => array_map(fn (CompanySegment $segment): ?int => $segment->getId(), $segments),
                 ],
                 'field'  => 'company_segments',
                 'type'   => 'company_segments',
@@ -541,7 +541,7 @@ final class UpdateCompanySegmentsCommandFunctionalTest extends MauticMysqlTestCa
         $this->createField(['alias' => 'contract_date', 'type' => 'date', 'object' => 'company']);
 
         $companyModel = self::getContainer()->get(CompanyModel::class);
-        \assert($companyModel instanceof CompanyModel);
+        $this->assertInstanceOf(CompanyModel::class, $companyModel);
 
         $expected = [];
         foreach ([
