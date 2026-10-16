@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Segment\Query;
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Unit\Segment\Query;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManager;

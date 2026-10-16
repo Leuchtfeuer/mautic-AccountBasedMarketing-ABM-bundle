@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Form\Type\Extension;
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Unit\Form\Type\Extension;
 
 use Mautic\CoreBundle\Form\Type\DynamicContentFilterEntryFiltersType;
 use Mautic\DynamicContentBundle\Form\Type\DwcEntryFiltersType;

@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Validator\Constraints;
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Unit\Validator\Constraints;
 
 use Mautic\LeadBundle\Segment\OperatorOptions;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Validator\Constraints\CompanySegmentCircularReference;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Validator\Constraints\CompanySegmentCircularReferenceValidator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -71,9 +72,7 @@ final class CompanySegmentCircularReferenceValidatorTest extends ConstraintValid
         $this->buildViolation('Circular reference detected.')->assertRaised();
     }
 
-    /**
-     * @dataProvider allOperatorProvider
-     */
+    #[DataProvider('allOperatorProvider')]
     public function testCircularReferenceIsDetectedThroughAllOperators(string $operator): void
     {
         $this->requestStack->push(new Request([], [], ['_route_params' => ['objectId' => 1]]));
