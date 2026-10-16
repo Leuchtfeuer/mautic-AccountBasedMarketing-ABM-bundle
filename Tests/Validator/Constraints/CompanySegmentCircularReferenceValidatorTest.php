@@ -70,4 +70,51 @@ final class CompanySegmentCircularReferenceValidatorTest extends ConstraintValid
 
         $this->buildViolation('Circular reference detected.')->assertRaised();
     }
+
+    /**
+     * @dataProvider allOperatorProvider
+     */
+    public function testCircularReferenceIsDetectedThroughAllOperators(string $operator): void
+    {
+        $this->requestStack->push(new Request([], [], ['_route_params' => ['objectId' => 1]]));
+
+        $referencedSegment = new CompanySegment();
+        $referencedSegment->setFilters([
+            [
+                'glue'       => 'and',
+                'field'      => 'company_segments',
+                'object'     => 'company_segments',
+                'type'       => CompanySegmentModel::PROPERTIES_FIELD,
+                'operator'   => $operator,
+                'properties' => ['filter' => [1]],
+            ],
+        ]);
+
+        $this->model->method('getEntity')->with(2)->willReturn($referencedSegment);
+
+        $constraint          = new CompanySegmentCircularReference();
+        $constraint->message = 'Circular reference detected.';
+
+        $this->validator->validate([
+            [
+                'glue'       => 'and',
+                'field'      => 'company_segments',
+                'object'     => 'company_segments',
+                'type'       => CompanySegmentModel::PROPERTIES_FIELD,
+                'operator'   => OperatorOptions::INCLUDING_ANY,
+                'properties' => ['filter' => [2]],
+            ],
+        ], $constraint);
+
+        $this->buildViolation('Circular reference detected.')->assertRaised();
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function allOperatorProvider(): iterable
+    {
+        yield 'including all' => [OperatorOptions::INCLUDING_ALL];
+        yield 'excluding all' => [OperatorOptions::EXCLUDING_ALL];
+    }
 }

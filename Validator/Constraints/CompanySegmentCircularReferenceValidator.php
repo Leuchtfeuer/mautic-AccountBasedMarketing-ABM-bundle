@@ -85,7 +85,12 @@ class CompanySegmentCircularReferenceValidator extends ConstraintValidator
     private function reduceToSegmentIds(array $filters): array
     {
         $segmentFilters = array_filter($filters, static fn (array $filter): bool => CompanySegmentModel::PROPERTIES_FIELD === $filter['type']
-            && in_array($filter['operator'], [OperatorOptions::INCLUDING_ANY, OperatorOptions::EXCLUDING_ANY], true));
+            && in_array($filter['operator'], [
+                OperatorOptions::INCLUDING_ANY,
+                OperatorOptions::EXCLUDING_ANY,
+                OperatorOptions::INCLUDING_ALL,
+                OperatorOptions::EXCLUDING_ALL,
+            ], true));
 
         /** @var array<array<mixed>> $segmentIdsInFilter */
         $segmentIdsInFilter = array_map(static function (array $filter) {
