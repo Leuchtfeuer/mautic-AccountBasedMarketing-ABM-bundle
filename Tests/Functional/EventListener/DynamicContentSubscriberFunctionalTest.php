@@ -8,6 +8,8 @@ use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\DynamicContentBundle\Entity\DynamicContent;
 use Mautic\LeadBundle\Entity\Company;
 use Mautic\LeadBundle\Entity\Lead;
+use Mautic\LeadBundle\Entity\LeadList;
+use Mautic\LeadBundle\Entity\ListLead;
 use Mautic\LeadBundle\Tracker\ContactTracker;
 use Mautic\PageBundle\Entity\Page;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
@@ -432,6 +434,51 @@ final class DynamicContentSubscriberFunctionalTest extends MauticMysqlTestCase
         $response = $this->client->getResponse();
         $this->assertResponseIsSuccessful();
         $this->assertStringNotContainsString('Mixed Filter Content', (string) $response->getContent());
+    }
+
+    public function testLeadSeesContentWithContactSegmentFilterWhenIntegrationIsUnpublished(): void
+    {
+        $this->publishAbmIntegration(false);
+
+        $lead = $this->createLead('john@acme.com', 'John');
+
+        $contactSegment = new LeadList();
+        $contactSegment->setName('Newsletter');
+        $contactSegment->setAlias('newsletter');
+        $contactSegment->setPublicName('Newsletter');
+        $this->em->persist($contactSegment);
+
+        $membership = new ListLead();
+        $membership->setLead($lead);
+        $membership->setList($contactSegment);
+        $membership->setDateAdded(new \DateTime());
+        $this->em->persist($membership);
+        $this->em->flush();
+
+        $contactTracker = self::getContainer()->get(ContactTracker::class);
+        $contactTracker->setSystemContact($lead);
+
+        $filters = [
+            [
+                'glue'     => 'and',
+                'field'    => 'leadlist',
+                'object'   => 'lead',
+                'type'     => 'leadlist',
+                'filter'   => [$contactSegment->getId()],
+                'display'  => null,
+                'operator' => 'in',
+            ],
+        ];
+        $dynamicContent = $this->createDynamicContentWithFilter($filters, 'Newsletter Content');
+
+        $page = $this->createPage($dynamicContent);
+
+        $this->logoutUser();
+
+        $this->client->request(Request::METHOD_GET, sprintf('/%s?contactId=%d', $page->getAlias(), $lead->getId()));
+
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Newsletter Content', (string) $this->client->getResponse()->getContent());
     }
 
     /**

@@ -426,6 +426,54 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $this->assertInstanceOf(CompanySegment::class, $segment);
     }
 
+    public function testCannotDeleteSegmentRequiredByCompanySegmentWithStringId(): void
+    {
+        $baseSegment = $this->createCompanySegment('Base Segment', 'base-segment');
+        $this->createCompanySegment('Dependent Segment', 'dependent-segment', true, [
+            [
+                'glue'       => 'and',
+                'field'      => 'company_segments',
+                'object'     => 'company',
+                'type'       => 'company_segments',
+                'operator'   => 'in',
+                'properties' => ['filter' => [(string) $baseSegment->getId()]],
+            ],
+        ]);
+
+        $crawler = $this->client->request(Request::METHOD_POST, '/s/company-segments/delete/'.$baseSegment->getId());
+        $this->assertStringContainsString('cannot be deleted, it is required by', $crawler->text());
+
+        $this->em->clear();
+        $this->assertInstanceOf(CompanySegment::class, $this->em->getRepository(CompanySegment::class)->find($baseSegment->getId()));
+    }
+
+    public function testCannotDeleteContactSegmentUsedByCompanySegmentWithStringId(): void
+    {
+        $contactSegment = new LeadList();
+        $contactSegment->setName('Contact Segment');
+        $contactSegment->setAlias('contact-segment');
+        $contactSegment->setPublicName('Contact Segment');
+        $this->em->persist($contactSegment);
+        $this->em->flush();
+
+        $this->createCompanySegment('Company Segment', 'company-segment', true, [
+            [
+                'glue'       => 'and',
+                'field'      => 'leadlist',
+                'object'     => 'company',
+                'type'       => 'leadlist',
+                'operator'   => 'in',
+                'properties' => ['filter' => [(string) $contactSegment->getId()]],
+            ],
+        ]);
+
+        $crawler = $this->client->request(Request::METHOD_POST, '/s/segments/delete/'.$contactSegment->getId());
+        $this->assertStringContainsString('is used in company segments: Company Segment', $crawler->text());
+
+        $this->em->clear();
+        $this->assertInstanceOf(LeadList::class, $this->em->getRepository(LeadList::class)->find($contactSegment->getId()));
+    }
+
     public function testCannotDeleteSegmentRequiredByContactSegmentWithSameId(): void
     {
         $this->loginAdminUser();

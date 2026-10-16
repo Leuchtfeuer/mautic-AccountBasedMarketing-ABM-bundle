@@ -7,7 +7,8 @@
          processIsolation="false"
          stopOnFailure="false"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         cacheResult="false">
 
     <testsuites>
         <testsuite name="unit">

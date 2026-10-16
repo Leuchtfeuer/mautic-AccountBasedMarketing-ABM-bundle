@@ -56,6 +56,10 @@ final class DynamicContentHelperDecorated extends DynamicContentHelper
             return $event->isMatched();
         }
 
+        if ($event->isMatch()) {
+            return true;
+        }
+
         return $this->matchFilterForLead($filters, $contactArray);
     }
 

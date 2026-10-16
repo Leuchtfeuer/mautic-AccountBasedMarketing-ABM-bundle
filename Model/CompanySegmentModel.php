@@ -836,7 +836,7 @@ class CompanySegmentModel extends FormModel
                     continue;
                 }
                 $filter = $eachFilter['properties']['filter'];
-                if (is_array($filter) && self::PROPERTIES_FIELD === $eachFilter['type'] && in_array($id, $filter, true)) {
+                if (is_array($filter) && self::PROPERTIES_FIELD === $eachFilter['type'] && $this->containsSegmentId($filter, $id)) {
                     $dependents[] = (string) $entity->getName();
                     break;
                 }
@@ -879,7 +879,7 @@ class CompanySegmentModel extends FormModel
                     continue;
                 }
                 $filterVal = $eachFilter['properties']['filter'];
-                if (is_array($filterVal) && 'leadlist' === $eachFilter['type'] && in_array($contactSegmentId, $filterVal, true)) {
+                if (is_array($filterVal) && 'leadlist' === $eachFilter['type'] && $this->containsSegmentId($filterVal, $contactSegmentId)) {
                     $value = $accessor->getValue($entity, $returnProperty);
                     if (('id' !== $returnProperty && !is_string($value)) || ('id' === $returnProperty && !is_numeric($value))) {
                         continue;
@@ -891,6 +891,20 @@ class CompanySegmentModel extends FormModel
         }
 
         return $dependents;
+    }
+
+    /**
+     * @param array<mixed> $filterValues
+     */
+    private function containsSegmentId(array $filterValues, int $segmentId): bool
+    {
+        foreach ($filterValues as $filterValue) {
+            if (is_numeric($filterValue) && (int) $filterValue === $segmentId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function getLikeQueryCompanySegment(): string
