@@ -253,7 +253,7 @@ final class CompanySegmentQueryBuilder
     }
 
     /**
-     * @return array<int, string|int> Array of dependent segment IDs
+     * @return array<int, int> Array of dependent segment IDs
      */
     private function getSegmentEdges(CompanySegment $companySegment): array
     {
@@ -280,12 +280,15 @@ final class CompanySegmentQueryBuilder
                 ) {
                     $filterEdges  = $segmentFilter['properties']['filter'];
                 }
-                /** @var array<int, int|string> $segmentEdges */
-                $segmentEdges = array_merge($segmentEdges, $filterEdges);
+                foreach ($filterEdges as $filterEdge) {
+                    if (is_numeric($filterEdge)) {
+                        $segmentEdges[] = (int) $filterEdge;
+                    }
+                }
             }
         }
 
-        return $segmentEdges;
+        return array_unique($segmentEdges);
     }
 
     private function getBaseTableName(): string

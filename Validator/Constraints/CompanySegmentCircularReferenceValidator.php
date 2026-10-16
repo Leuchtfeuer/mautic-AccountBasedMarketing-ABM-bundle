@@ -38,11 +38,8 @@ class CompanySegmentCircularReferenceValidator extends ConstraintValidator
         }
 
         /** @var array<array<mixed>> $filters */
-        $dependentSegmentIds = $this->flatten(array_map(function ($id): array {
-            if (!is_numeric($id)) {
-                return [];
-            }
-            $entity = $this->model->getEntity((int) $id);
+        $dependentSegmentIds = $this->flatten(array_map(function (int $id): array {
+            $entity = $this->model->getEntity($id);
             if (!$entity instanceof CompanySegment) {
                 // The referenced segment no longer exists; it cannot cause a circular reference.
                 return [];
@@ -83,7 +80,7 @@ class CompanySegmentCircularReferenceValidator extends ConstraintValidator
      *
      * @param array<array<mixed>> $filters
      *
-     * @return array<mixed>
+     * @return array<int, int>
      */
     private function reduceToSegmentIds(array $filters): array
     {
@@ -100,7 +97,14 @@ class CompanySegmentCircularReferenceValidator extends ConstraintValidator
             return $filter['properties']['filter'] ?? $bcValue;
         }, $segmentFilters);
 
-        return $this->flatten($segmentIdsInFilter);
+        $segmentIds = [];
+        foreach ($this->flatten($segmentIdsInFilter) as $segmentId) {
+            if (is_numeric($segmentId)) {
+                $segmentIds[] = (int) $segmentId;
+            }
+        }
+
+        return $segmentIds;
     }
 
     /**
