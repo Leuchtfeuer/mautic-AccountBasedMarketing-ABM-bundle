@@ -1,0 +1,126 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Validator\Constraints;
+
+use Mautic\LeadBundle\Segment\OperatorOptions;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\ConstraintValidator;
+use Symfony\Component\Validator\Exception\UnexpectedTypeException;
+
+/**
+ * Validates that a company segment does not reference itself through other segments.
+ * Prevents circular dependencies like: Segment A → Segment B → Segment A.
+ */
+class CompanySegmentCircularReferenceValidator extends ConstraintValidator
+{
+    public function __construct(
+        private readonly CompanySegmentModel $model,
+        private readonly RequestStack $requestStack,
+    ) {
+    }
+
+    /**
+     * @param array<mixed>|mixed $filters
+     */
+    public function validate($filters, Constraint $constraint): void
+    {
+        if (!$constraint instanceof CompanySegmentCircularReference) {
+            throw new UnexpectedTypeException($constraint, CompanySegmentCircularReference::class);
+        }
+
+        if (!is_array($filters)) {
+            throw new UnexpectedTypeException($filters, 'array');
+        }
+
+        /** @var array<array<mixed>> $filters */
+        $dependentSegmentIds = $this->flatten(array_map(function (int $id): array {
+            $entity = $this->model->getEntity($id);
+            if (!$entity instanceof CompanySegment) {
+                // The referenced segment no longer exists; it cannot cause a circular reference.
+                return [];
+            }
+
+            return $this->reduceToSegmentIds($entity->getFilters());
+        }, $this->reduceToSegmentIds($filters)));
+
+        try {
+            $segmentId = $this->getSegmentIdFromRequest();
+            if (in_array($segmentId, $dependentSegmentIds, true)) {
+                $this->context->addViolation($constraint->message);
+            }
+        } catch (\UnexpectedValueException) {
+            // Segment ID is not in the request. May be new segment.
+        }
+    }
+
+    private function getSegmentIdFromRequest(): int
+    {
+        $request = $this->requestStack->getCurrentRequest();
+
+        if (null === $request) {
+            throw new \UnexpectedValueException('Request is null.');
+        }
+
+        $routeParams = $request->get('_route_params');
+
+        if (!is_array($routeParams) || !isset($routeParams['objectId']) || !is_numeric($routeParams['objectId'])) {
+            throw new \UnexpectedValueException('Segment ID is missing in the request');
+        }
+
+        return (int) $routeParams['objectId'];
+    }
+
+    /**
+     * Extract segment IDs from filters array.
+     *
+     * @param array<array<mixed>> $filters
+     *
+     * @return array<int, int>
+     */
+    private function reduceToSegmentIds(array $filters): array
+    {
+        $segmentFilters = array_filter($filters, static fn (array $filter): bool => CompanySegmentModel::PROPERTIES_FIELD === $filter['type']
+            && in_array($filter['operator'], [
+                OperatorOptions::INCLUDING_ANY,
+                OperatorOptions::EXCLUDING_ANY,
+                OperatorOptions::INCLUDING_ALL,
+                OperatorOptions::EXCLUDING_ALL,
+            ], true));
+
+        /** @var array<array<mixed>> $segmentIdsInFilter */
+        $segmentIdsInFilter = array_map(static function (array $filter) {
+            $bcValue = $filter['filter'] ?? [];
+            if (is_array($filter['properties']) && !array_key_exists('filter', $filter['properties'])) {
+                return $bcValue;
+            }
+
+            return $filter['properties']['filter'] ?? $bcValue;
+        }, $segmentFilters);
+
+        $segmentIds = [];
+        foreach ($this->flatten($segmentIdsInFilter) as $segmentId) {
+            if (is_numeric($segmentId)) {
+                $segmentIds[] = (int) $segmentId;
+            }
+        }
+
+        return $segmentIds;
+    }
+
+    /**
+     * Flatten and deduplicate array.
+     *
+     * @param array<array<mixed>> $array
+     *
+     * @return array<mixed>
+     */
+    private function flatten(array $array): array
+    {
+        return array_unique(array_reduce($array, array_merge(...), []));
+    }
+}

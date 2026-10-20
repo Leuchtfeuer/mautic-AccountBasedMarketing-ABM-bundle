@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event;
+
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+
+abstract class CompanySegmentSaveEvent extends CompanySegmentEvent
+{
+    public function __construct(CompanySegment $companySegment, private readonly bool $isNew)
+    {
+        parent::__construct($companySegment);
+    }
+
+    public function isNew(): bool
+    {
+        return $this->isNew;
+    }
+}

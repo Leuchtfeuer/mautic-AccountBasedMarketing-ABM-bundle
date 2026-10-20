@@ -1,0 +1,164 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\Api;
+
+use Doctrine\Persistence\ManagerRegistry;
+use Mautic\ApiBundle\Controller\CommonApiController;
+use Mautic\ApiBundle\Helper\EntityResultHelper;
+use Mautic\CoreBundle\Factory\ModelFactory;
+use Mautic\CoreBundle\Helper\AppVersion;
+use Mautic\CoreBundle\Helper\CoreParametersHelper;
+use Mautic\CoreBundle\Security\Permissions\CorePermissions;
+use Mautic\CoreBundle\Translation\Translator;
+use Mautic\LeadBundle\Model\CompanyModel;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\RouterInterface;
+
+/**
+ * @extends CommonApiController<CompanySegment>
+ */
+final class CompanySegmentApiController extends CommonApiController
+{
+    public function __construct(
+        CorePermissions $security,
+        Translator $translator,
+        EntityResultHelper $entityResultHelper,
+        RouterInterface $router,
+        FormFactoryInterface $formFactory,
+        AppVersion $appVersion,
+        RequestStack $requestStack,
+        ManagerRegistry $doctrine,
+        ModelFactory $modelFactory,
+        EventDispatcherInterface $dispatcher,
+        CoreParametersHelper $coreParametersHelper,
+        private readonly CompanySegmentModel $companySegmentModel,
+    ) {
+        $this->model             = $companySegmentModel;
+        $this->entityClass       = CompanySegment::class;
+        $this->entityNameOne     = 'companysegment';
+        $this->entityNameMulti   = 'companysegments';
+        $this->permissionBase    = 'lead:lists';
+        parent::__construct(
+            $security,
+            $translator,
+            $entityResultHelper,
+            $router,
+            $formFactory,
+            $appVersion,
+            $requestStack,
+            $doctrine,
+            $modelFactory,
+            $dispatcher,
+            $coreParametersHelper
+        );
+    }
+
+    /**
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+     */
+    public function removeCompanyAction(CompanyModel $companyModel, int $id, int $companyId): Response
+    {
+        $companySegment = $this->model->getEntity($id);
+
+        if (null === $companySegment) {
+            return $this->notFound();
+        }
+
+        $company = $companyModel->getEntity($companyId);
+
+        if (null === $company) {
+            return $this->notFound();
+        } elseif (!$this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $company->getPermissionUser())) {
+            return $this->accessDenied();
+        }
+
+        if (!$this->checkEntityAccess($companySegment, 'edit')) {
+            return $this->accessDenied();
+        }
+
+        $this->companySegmentModel->removeCompany($company, [$companySegment], true);
+
+        $view = $this->view([], Response::HTTP_OK);
+
+        return $this->handleView($view);
+    }
+
+    /**
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+     */
+    public function addCompanyAction(CompanyModel $companyModel, int $id, int $companyId): Response
+    {
+        $companySegment = $this->model->getEntity($id);
+
+        if (null === $companySegment) {
+            return $this->notFound();
+        }
+
+        $company = $companyModel->getEntity($companyId);
+
+        if (null === $company) {
+            return $this->notFound();
+        } elseif (!$this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $company->getPermissionUser())) {
+            return $this->accessDenied();
+        }
+
+        if (!$this->checkEntityAccess($companySegment, 'edit')) {
+            return $this->accessDenied();
+        }
+
+        $this->companySegmentModel->addCompany($company, [$companySegment], true);
+
+        $view = $this->view([], Response::HTTP_OK);
+
+        return $this->handleView($view);
+    }
+
+    /**
+     * Adds companies to a company segment.
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+     */
+    public function addCompaniesAction(CompanyModel $companyModel, Request $request, int $id): Response
+    {
+        $companyIds = $request->request->all()['ids'] ?? null;
+        if (!is_array($companyIds)) {
+            return $this->returnError('mautic.core.error.badrequest', Response::HTTP_BAD_REQUEST);
+        }
+
+        $companySegment = $this->model->getEntity($id);
+
+        if (null === $companySegment) {
+            return $this->notFound();
+        }
+
+        if (!$this->checkEntityAccess($companySegment, 'edit')) {
+            return $this->accessDenied();
+        }
+
+        $responseDetail = [];
+        foreach ($companyIds as $companyId) {
+            $company = $companyModel->getEntity($companyId);
+
+            if (null === $company) {
+                $responseDetail[$companyId] = ['success' => false];
+            } elseif (!$this->security->hasEntityAccess('lead:leads:editown', 'lead:leads:editother', $company->getPermissionUser())) {
+                $responseDetail[$companyId] = ['success' => false];
+            } else {
+                $this->companySegmentModel->addCompany($company, [$companySegment], true);
+                $responseDetail[$company->getId()] = ['success' => true];
+            }
+        }
+
+        $view = $this->view(['details' => $responseDetail], Response::HTTP_OK);
+
+        return $this->handleView($view);
+    }
+}

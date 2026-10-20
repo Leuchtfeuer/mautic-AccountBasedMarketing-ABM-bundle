@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
+
+use Mautic\CoreBundle\CoreEvents;
+use Mautic\CoreBundle\Event\CustomButtonEvent;
+use Mautic\CoreBundle\Security\Permissions\CorePermissions;
+use Mautic\CoreBundle\Twig\Helper\ButtonHelper;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\Routing\RouterInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
+
+/**
+ * Adds the "Change company segments" bulk action button to the companies list.
+ */
+final readonly class ButtonSubscriber implements EventSubscriberInterface
+{
+    public function __construct(
+        private Config $config,
+        private TranslatorInterface $translator,
+        private RouterInterface $router,
+        private CorePermissions $security,
+    ) {
+    }
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            CoreEvents::VIEW_INJECT_CUSTOM_BUTTONS => ['injectViewButtons', 0],
+        ];
+    }
+
+    public function injectViewButtons(CustomButtonEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        if (!str_contains($event->getRoute(), 'mautic_company_index')) {
+            return;
+        }
+
+        if (true !== $this->security->isGranted(['lead:leads:editown', 'lead:leads:editother'], 'MATCH_ONE')) {
+            return;
+        }
+
+        $event->addButton(
+            [
+                'attr'      => [
+                    'class'       => 'btn btn-default btn-sm btn-nospin',
+                    'data-toggle' => 'ajaxmodal',
+                    'data-target' => '#MauticSharedModal',
+                    'href'        => $this->router->generate('mautic_company_segments_batch_company_view'),
+                    'data-header' => $this->translator->trans('mautic.company_segments.action.change'),
+                ],
+                'btnText'   => $this->translator->trans('mautic.company_segments.action.change'),
+                'iconClass' => 'ri-pie-chart-line',
+            ],
+            ButtonHelper::LOCATION_BULK_ACTIONS
+        );
+    }
+}

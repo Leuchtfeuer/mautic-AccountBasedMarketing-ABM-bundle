@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event;
+
+use Mautic\LeadBundle\Entity\Company;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
+use Symfony\Contracts\EventDispatcher\Event;
+
+abstract class CompanySegmentRebuildChangeEvent extends Event
+{
+    /**
+     * @param array<Company> $companies
+     */
+    public function __construct(
+        private readonly array $companies,
+        private readonly CompanySegment $companySegment,
+        private readonly ?\DateTime $date = null,
+    ) {
+    }
+
+    /**
+     * @return array<Company>
+     */
+    public function getCompanies(): array
+    {
+        return $this->companies;
+    }
+
+    public function getCompanySegment(): CompanySegment
+    {
+        return $this->companySegment;
+    }
+
+    public function getDate(): ?\DateTime
+    {
+        return $this->date;
+    }
+}
