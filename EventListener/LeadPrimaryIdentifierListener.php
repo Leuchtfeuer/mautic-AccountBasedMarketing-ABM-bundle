@@ -7,7 +7,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
 use Mautic\LeadBundle\Entity\Lead;
-use MauticPlugin\LeuchtfeuerFloodlightB2BBundle\Integration\Config;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 #[AsEntityListener(event: Events::postLoad, method: 'applyPrimaryIdentifierOrder', entity: Lead::class)]
