@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'name'        => 'ABM (Account Based Marketing) by Leuchtfeuer',
     'description' => 'A suite of company-centric enhancements like Company Segments and Company Scoring',
-    'version'     => '7.0.0',
+    'version'     => '7.0.1',
     'author'      => 'Leuchtfeuer Digital Marketing GmbH',
     'categories'  => [
         'company_segment' => [
