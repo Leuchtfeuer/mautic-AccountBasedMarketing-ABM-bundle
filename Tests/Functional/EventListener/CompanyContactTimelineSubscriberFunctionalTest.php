@@ -27,7 +27,7 @@ final class CompanyContactTimelineSubscriberFunctionalTest extends MauticMysqlTe
         $result = self::getContainer()->get(CompanyTimelineModel::class)
             ->getEngagements($company, ['includeEvents' => ['lead.create']], null, 1, 2);
 
-        $this->assertSame(['Jane', 'Jack'], array_column($result['events'], 'contactName'));
+        $this->assertSame(['Jane', 'Jack'], array_map(static fn (array $e): ?string => $e['contact']->getFirstname(), $result['events']));
         $this->assertSame(3, $result['total']);
         $this->assertArrayHasKey('lead.create', $result['types']);
     }

@@ -15,6 +15,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class CompanyTimelineController extends AbstractFormController
 {
+    public const SESSION_KEY = 'mautic.company.%d.timeline';
+
     public function indexAction(Request $request, CompanyModel $companyModel, CompanyTimelineModel $timelineModel, int $companyId, int $page = 1): Response
     {
         $company = $companyModel->getEntity($companyId);
@@ -26,7 +28,7 @@ final class CompanyTimelineController extends AbstractFormController
             $this->throwAccessDenied();
         }
 
-        $sessionKey = 'mautic.company.'.$companyId.'.timeline';
+        $sessionKey = sprintf(self::SESSION_KEY, $companyId);
         $session    = $request->getSession();
 
         if (!$session->has($sessionKey.'.orderby')) {

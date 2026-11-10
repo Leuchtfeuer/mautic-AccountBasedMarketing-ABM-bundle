@@ -22,6 +22,20 @@ final class CompanyTimelineControllerTest extends MauticMysqlTestCase
         $this->publishAbmIntegration();
     }
 
+    public function testTimelineIsRendered(): void
+    {
+        $company = new Company();
+        $company->setName('Acme');
+        $company->setDateAdded(new \DateTime('-1 day'));
+        $this->em->persist($company);
+        $this->em->flush();
+
+        $this->client->request(Request::METHOD_GET, '/s/company-timeline/'.$company->getId());
+
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Company created', (string) $this->client->getResponse()->getContent());
+    }
+
     public function testUnknownCompanyReturnsNotFound(): void
     {
         $this->client->request(Request::METHOD_GET, '/s/company-timeline/999999');

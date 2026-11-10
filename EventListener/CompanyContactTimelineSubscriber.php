@@ -67,9 +67,9 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
             $event->addToCounter((int) $engagements['total']);
 
             foreach ($engagements['events'] as $contactEvent) {
-                $contactEvent['eventId']     = $contact->getId().'-'.$contactEvent['eventId'];
-                $contactEvent['contactId']   = $contact->getId();
-                $contactEvent['contactName'] = $contact->getPrimaryIdentifier();
+                $contactEvent['eventId']   = $contact->getId().'-'.$contactEvent['eventId'];
+                $contactEvent['contactId'] = $contact->getId();
+                $contactEvent['contact']   = $contact;
                 $event->addEvent($contactEvent);
             }
         }
