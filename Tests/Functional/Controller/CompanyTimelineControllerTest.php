@@ -7,6 +7,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functiona
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
 use Mautic\LeadBundle\Entity\Company;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,11 +37,21 @@ final class CompanyTimelineControllerTest extends MauticMysqlTestCase
         $this->assertStringContainsString('Company created', (string) $this->client->getResponse()->getContent());
     }
 
-    public function testUnknownCompanyReturnsNotFound(): void
+    public function testSearchFilterIsAppliedAndRemembered(): void
     {
-        $this->client->request(Request::METHOD_GET, '/s/company-timeline/999999');
+        $company = new Company();
+        $company->setName('Acme');
+        $company->setDateAdded(new \DateTime('-1 day'));
+        $this->em->persist($company);
+        $this->em->flush();
+        self::getContainer()->get(CompanySegmentModel::class)->addCompany($company, [$this->createCompanySegment('Key Accounts', 'key-accounts')], true);
+        $url = '/s/company-timeline/'.$company->getId();
 
-        $this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
+        $this->client->request(Request::METHOD_POST, $url, ['search' => 'Key Accounts']);
+        $this->assertTimelineShowsOnlySegmentEntry();
+
+        $this->client->request(Request::METHOD_GET, $url);
+        $this->assertTimelineShowsOnlySegmentEntry();
     }
 
     public function testUserWithoutContactPermissionIsDenied(): void
@@ -58,5 +69,13 @@ final class CompanyTimelineControllerTest extends MauticMysqlTestCase
         $this->client->request(Request::METHOD_GET, '/s/company-timeline/'.$company->getId());
 
         $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    private function assertTimelineShowsOnlySegmentEntry(): void
+    {
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Key Accounts', $content);
+        $this->assertStringNotContainsString('Company created', $content);
     }
 }

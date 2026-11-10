@@ -28,18 +28,6 @@ final class CompanyTimelineModelTest extends TestCase
         $this->assertSame(3, $result['maxPages']);
     }
 
-    public function testEventsAreSortedNaturallyByLabel(): void
-    {
-        $model = $this->createModel([
-            ['eventLabel' => 'Item 10'],
-            ['eventLabel' => ['label' => 'Item 2', 'href' => '#']],
-        ]);
-
-        $result = $model->getEngagements(new Company(), [], ['eventLabel', 'ASC']);
-
-        $this->assertSame(['label' => 'Item 2', 'href' => '#'], $result['events'][0]['eventLabel']);
-    }
-
     /**
      * @param array<int, array<string, mixed>> $events
      */

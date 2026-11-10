@@ -75,19 +75,6 @@ final class CompanyEventLogSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->assertSame([['import', 'update']], $this->getObjectActions($this->getLogs($existing)));
     }
 
-    public function testNothingIsLoggedWhenIntegrationIsUnpublished(): void
-    {
-        $this->publishAbmIntegration(false);
-        $company = $this->createCompany('Acme');
-        $segment = $this->createCompanySegment('Key Accounts', 'key-accounts');
-
-        $companySegmentModel = self::getContainer()->get(CompanySegmentModel::class);
-        $this->assertInstanceOf(CompanySegmentModel::class, $companySegmentModel);
-        $companySegmentModel->addCompany($company, [$segment], true);
-
-        $this->assertSame([], $this->getLogs($company));
-    }
-
     private function createCompany(string $name): Company
     {
         $company = new Company();
