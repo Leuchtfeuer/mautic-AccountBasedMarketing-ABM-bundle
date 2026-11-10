@@ -37,7 +37,9 @@ final class CompanyTimelineSubscriberFunctionalTest extends MauticMysqlTestCase
      */
     private function getTimelineEvents(Company $company): array
     {
-        return self::getContainer()->get(CompanyTimelineModel::class)->getEngagements($company)['events'];
+        $filters = ['includeEvents' => ['company.created', 'company.segment.added', 'company.contact.added']];
+
+        return self::getContainer()->get(CompanyTimelineModel::class)->getEngagements($company, $filters)['events'];
     }
 
     private function createCompany(): Company
