@@ -54,7 +54,7 @@ final class CompanyEventLogSubscriberFunctionalTest extends MauticMysqlTestCase
         $logs = $this->getLogs($company);
         $this->assertSame([['lead', 'added'], ['lead', 'removed']], $this->getObjectActions($logs));
         $this->assertSame($lead->getId(), $logs[0]->getObjectId());
-        $this->assertSame('John Doe', $logs[0]->getProperties()['object_description'] ?? null);
+        $this->assertSame('John Doe', $logs[0]->getProperties()['contact_name'] ?? null);
     }
 
     public function testCompanyImportLogsCreateAndUpdate(): void

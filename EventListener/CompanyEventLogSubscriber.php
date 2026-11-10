@@ -76,7 +76,7 @@ final class CompanyEventLogSubscriber implements EventSubscriberInterface
                 'lead',
                 $event->wasAdded() ? 'added' : 'removed',
                 $lead->getId(),
-                ['object_description' => $lead->getPrimaryIdentifier()],
+                ['contact_name' => $lead->getPrimaryIdentifier()],
             );
         }
     }

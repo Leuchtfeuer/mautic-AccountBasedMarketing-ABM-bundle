@@ -18,6 +18,50 @@ class CompanyEventLogRepository extends CommonRepository
     }
 
     /**
+     * @param array{search: string, order: array{0: string, 1: string}, fromDate: ?\DateTimeInterface, toDate: ?\DateTimeInterface, start: int, limit: int} $options
+     *
+     * @return array{total: int, results: array<int, array<string, mixed>>}
+     */
+    public function getTimelineEvents(int $companyId, string $object, ?string $action, array $options): array
+    {
+        $qb = $this->getEntityManager()->getConnection()->createQueryBuilder()
+            ->from(MAUTIC_TABLE_PREFIX.CompanyEventLog::TABLE_NAME)
+            ->where('company_id = :companyId')
+            ->andWhere('object = :object')
+            ->setParameter('companyId', $companyId)
+            ->setParameter('object', $object);
+
+        if (null !== $action) {
+            $qb->andWhere('action = :action')->setParameter('action', $action);
+        }
+
+        if ('' !== $options['search']) {
+            $qb->andWhere('properties LIKE :search')->setParameter('search', '%'.addcslashes($options['search'], '%_\\').'%');
+        }
+
+        if (null !== $options['fromDate']) {
+            $qb->andWhere('date_added >= :fromDate')->setParameter('fromDate', $options['fromDate'], Types::DATETIME_MUTABLE);
+        }
+
+        if (null !== $options['toDate']) {
+            $qb->andWhere('date_added <= :toDate')->setParameter('toDate', $options['toDate'], Types::DATETIME_MUTABLE);
+        }
+
+        $total     = (int) (clone $qb)->select('COUNT(*)')->executeQuery()->fetchOne();
+        $direction = 'timestamp' === $options['order'][0] && 'ASC' === $options['order'][1] ? 'ASC' : 'DESC';
+
+        $results = $qb->select('id', 'object_id', 'date_added', 'properties', 'user_name')
+            ->orderBy('date_added', $direction)
+            ->addOrderBy('id', $direction)
+            ->setFirstResult($options['start'])
+            ->setMaxResults($options['limit'])
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return ['total' => $total, 'results' => $results];
+    }
+
+    /**
      * @param array<string, mixed> $properties
      */
     public function insertLog(
