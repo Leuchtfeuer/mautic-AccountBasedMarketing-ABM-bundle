@@ -18,6 +18,7 @@ final readonly class IntegrationGuardSubscriber implements EventSubscriberInterf
 {
     private const ROUTE_PREFIXES = [
         'mautic_company_segments_',
+        'mautic_company_timeline_',
         'mautic_api_companysegment',
     ];
 

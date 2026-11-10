@@ -65,6 +65,17 @@ return [
                 'path'       => '/company-segments/batch/company/view',
                 'controller' => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\BatchCompanySegmentController::class.'::indexAction',
             ],
+            'mautic_company_timeline_action' => [
+                'path'         => '/company-timeline/{companyId}/{page}',
+                'controller'   => MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanyTimelineController::class.'::indexAction',
+                'requirements' => [
+                    'companyId' => '\d+',
+                    'page'      => '\d+',
+                ],
+                'defaults' => [
+                    'page' => 1,
+                ],
+            ],
         ],
         'api' => [
             'mautic_api_companysegmentsstandard' => [
