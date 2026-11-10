@@ -11,7 +11,7 @@ This plugin brings company-based Segments to Mautic and extends Mautic capabilit
 > [!TIP]
 > Other releases of this plugin may cover different Mautic versions!
 
-- Mautic 7.2+
+- Mautic 7.3+
 - PHP 8.2+
 
 ## Installation
@@ -65,6 +65,8 @@ php bin/console leuchtfeuer:abm:segments:update
 ```
 
 It works just like the contact segments update command.
+
+The Company detail view has a new `History` tab. It shows Company events (created, Company Segment changes, Contacts added or removed, imports) together with the timeline events of all Contacts of the Company. Search, include/exclude filters, sorting and pagination work like in the Contact timeline.
 
 ## API support
 
