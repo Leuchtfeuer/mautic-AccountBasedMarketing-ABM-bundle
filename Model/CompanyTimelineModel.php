@@ -8,6 +8,9 @@ use Mautic\LeadBundle\Entity\Company;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanyTimelineEvent;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
+/**
+ * @phpstan-import-type TimelineFilters from CompanyTimelineEvent
+ */
 final readonly class CompanyTimelineModel
 {
     public function __construct(
@@ -16,10 +19,10 @@ final readonly class CompanyTimelineModel
     }
 
     /**
-     * @param array{search?: string, includeEvents?: string[], excludeEvents?: string[], dateFrom?: ?\DateTimeInterface, dateTo?: ?\DateTimeInterface} $filters
-     * @param array{0: string, 1: string}|null                                                                                                         $orderBy
+     * @param TimelineFilters                  $filters
+     * @param array{0: string, 1: string}|null $orderBy
      *
-     * @return array{events: array<int, array<string, mixed>>, filters: array<string, mixed>, order: array{0: string, 1: string}, types: array<string, string>, total: int, page: int, limit: int, maxPages: int}
+     * @return array<string, mixed>
      */
     public function getEngagements(Company $company, array $filters = [], ?array $orderBy = null, int $page = 1, int $limit = 25): array
     {

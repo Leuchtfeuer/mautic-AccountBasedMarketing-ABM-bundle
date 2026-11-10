@@ -6,9 +6,12 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Mautic\CoreBundle\Entity\CommonRepository;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanyTimelineEvent;
 
 /**
  * @extends CommonRepository<CompanyEventLog>
+ *
+ * @phpstan-import-type TimelineQueryOptions from CompanyTimelineEvent
  */
 class CompanyEventLogRepository extends CommonRepository
 {
@@ -18,7 +21,7 @@ class CompanyEventLogRepository extends CommonRepository
     }
 
     /**
-     * @param array{search: string, order: array{0: string, 1: string}, fromDate: ?\DateTimeInterface, toDate: ?\DateTimeInterface, start: int, limit: int} $options
+     * @param TimelineQueryOptions $options
      *
      * @return array{total: int, results: array<int, array<string, mixed>>}
      */

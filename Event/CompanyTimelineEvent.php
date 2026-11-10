@@ -9,6 +9,9 @@ use Symfony\Contracts\EventDispatcher\Event;
 
 /**
  * Listeners add their first page * limit events (see getQueryOptions()) and their total count.
+ *
+ * @phpstan-type TimelineFilters array{search?: string, includeEvents?: string[], excludeEvents?: string[], dateFrom?: ?\DateTimeInterface, dateTo?: ?\DateTimeInterface}
+ * @phpstan-type TimelineQueryOptions array{search: string, order: array{0: string, 1: string}, fromDate: ?\DateTimeInterface, toDate: ?\DateTimeInterface, start: int, limit: int}
  */
 final class CompanyTimelineEvent extends Event
 {
@@ -27,8 +30,8 @@ final class CompanyTimelineEvent extends Event
     private bool $fetchTypesOnly = false;
 
     /**
-     * @param array{search?: string, includeEvents?: string[], excludeEvents?: string[], dateFrom?: ?\DateTimeInterface, dateTo?: ?\DateTimeInterface} $filters
-     * @param array{0: string, 1: string}                                                                                                              $orderBy
+     * @param TimelineFilters             $filters
+     * @param array{0: string, 1: string} $orderBy
      */
     public function __construct(
         private readonly ?Company $company = null,
@@ -80,7 +83,7 @@ final class CompanyTimelineEvent extends Event
     }
 
     /**
-     * @return array{search: string, order: array{0: string, 1: string}, fromDate: ?\DateTimeInterface, toDate: ?\DateTimeInterface, start: int, limit: int}
+     * @return TimelineQueryOptions
      */
     public function getQueryOptions(): array
     {
