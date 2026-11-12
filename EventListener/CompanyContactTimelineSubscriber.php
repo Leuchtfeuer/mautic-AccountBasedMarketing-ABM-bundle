@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
-use Mautic\LeadBundle\Entity\CompanyLeadRepository;
+use Doctrine\DBAL\Connection;
+use Mautic\CoreBundle\Helper\UserHelper;
+use Mautic\CoreBundle\Security\Permissions\CorePermissions;
 use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Entity\LeadRepository;
 use Mautic\LeadBundle\Model\LeadModel;
@@ -59,7 +61,9 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
         private Config $config,
         private LeadModel $leadModel,
         private LeadRepository $leadRepository,
-        private CompanyLeadRepository $companyLeadRepository,
+        private Connection $connection,
+        private CorePermissions $security,
+        private UserHelper $userHelper,
     ) {
     }
 
@@ -87,7 +91,7 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
             return;
         }
 
-        $contactIds = array_column($this->companyLeadRepository->getCompanyLeads($companyId), 'lead_id');
+        $contactIds = $this->getContactIds((int) $companyId);
         if ([] === $contactIds) {
             return;
         }
@@ -134,6 +138,28 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
                 $this->addContactEvent($event, $contactEvent, $contact);
             }
         }
+    }
+
+    /**
+     * Users without lead:leads:viewother only get the contacts they own.
+     *
+     * @return array<int|string>
+     */
+    private function getContactIds(int $companyId): array
+    {
+        $qb = $this->connection->createQueryBuilder()
+            ->select('cl.lead_id')
+            ->from(MAUTIC_TABLE_PREFIX.'companies_leads', 'cl')
+            ->where('cl.company_id = :companyId')
+            ->setParameter('companyId', $companyId);
+
+        if (!$this->security->isGranted('lead:leads:viewother')) {
+            $qb->innerJoin('cl', MAUTIC_TABLE_PREFIX.'leads', 'l', 'l.id = cl.lead_id')
+                ->andWhere('l.owner_id = :ownerId')
+                ->setParameter('ownerId', $this->userHelper->getUser()->getId());
+        }
+
+        return $qb->executeQuery()->fetchFirstColumn();
     }
 
     /**

@@ -15,6 +15,15 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanyTimeline
  */
 class CompanyEventLogRepository extends CommonRepository
 {
+    /**
+     * Log object => property that holds the timeline event label.
+     */
+    private const LABEL_PROPERTIES = [
+        'company_segment' => 'company_segment_name',
+        'lead'            => 'contact_name',
+        'import'          => 'file',
+    ];
+
     public function getTableAlias(): string
     {
         return 'cel';
@@ -51,10 +60,13 @@ class CompanyEventLogRepository extends CommonRepository
         }
 
         $total     = (int) (clone $qb)->select('COUNT(*)')->executeQuery()->fetchOne();
-        $direction = 'timestamp' === $options['order'][0] && 'ASC' === $options['order'][1] ? 'ASC' : 'DESC';
+        $direction = 'ASC' === $options['order'][1] ? 'ASC' : 'DESC';
+        $orderBy   = 'eventLabel' === $options['order'][0]
+            ? "JSON_UNQUOTE(JSON_EXTRACT(properties, '$.".self::LABEL_PROPERTIES[$object]."'))"
+            : 'date_added';
 
         $results = $qb->select('id', 'object_id', 'date_added', 'properties', 'user_name')
-            ->orderBy('date_added', $direction)
+            ->orderBy($orderBy, $direction)
             ->addOrderBy('id', $direction)
             ->setFirstResult($options['start'])
             ->setMaxResults($options['limit'])

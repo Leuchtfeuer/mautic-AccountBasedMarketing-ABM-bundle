@@ -7,6 +7,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functiona
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
 use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
 use Mautic\LeadBundle\Entity\Company;
+use Mautic\LeadBundle\Entity\Lead;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\HttpFoundation\Request;
@@ -69,6 +70,39 @@ final class CompanyTimelineControllerTest extends MauticMysqlTestCase
         $this->client->request(Request::METHOD_GET, '/s/company-timeline/'.$company->getId());
 
         $this->assertResponseStatusCodeSame(Response::HTTP_FORBIDDEN);
+    }
+
+    public function testUserWithViewOwnPermissionSeesOnlyOwnContacts(): void
+    {
+        $role = $this->createRole('view_own_contacts');
+        $this->createPermission($role, 'lead:leads', 2);
+        $user = $this->createUser('view-own@mautic-test.com', 'view-own', 'View', 'Own', $role);
+
+        $company = new Company();
+        $company->setName('Acme');
+        $company->setOwner($user);
+        $this->em->persist($company);
+
+        $ownContact = new Lead();
+        $ownContact->setFirstname('Owned');
+        $ownContact->setOwner($user);
+        $this->em->persist($ownContact);
+
+        $otherContact = new Lead();
+        $otherContact->setFirstname('Foreign');
+        $this->em->persist($otherContact);
+        $this->em->flush();
+
+        $this->createCompanyLead($company, $ownContact);
+        $this->createCompanyLead($company, $otherContact);
+        $this->loginUser($user);
+
+        $this->client->request(Request::METHOD_POST, '/s/company-timeline/'.$company->getId(), ['search' => '', 'includeEvents' => ['lead.create']]);
+
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Owned', $content);
+        $this->assertStringNotContainsString('Foreign', $content);
     }
 
     private function assertTimelineShowsOnlySegmentEntry(): void

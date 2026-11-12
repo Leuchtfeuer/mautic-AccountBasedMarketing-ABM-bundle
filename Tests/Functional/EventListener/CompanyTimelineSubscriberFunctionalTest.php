@@ -32,6 +32,21 @@ final class CompanyTimelineSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->assertSame('Key Accounts', $events[1]['eventLabel']['label']);
     }
 
+    public function testLogEventsAreSortedByLabelBeforePagination(): void
+    {
+        $this->publishAbmIntegration();
+        $company      = $this->createCompany();
+        $segmentModel = self::getContainer()->get(CompanySegmentModel::class);
+        $segmentModel->addCompany($company, [$this->createCompanySegment('Alpha', 'alpha')], true);
+        $segmentModel->addCompany($company, [$this->createCompanySegment('Beta', 'beta')], true);
+
+        $result = self::getContainer()->get(CompanyTimelineModel::class)
+            ->getEngagements($company, ['includeEvents' => ['company.segment.added']], ['eventLabel', 'ASC'], 1, 1);
+
+        $this->assertSame('Alpha', $result['events'][0]['eventLabel']['label']);
+        $this->assertSame(2, $result['total']);
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */
