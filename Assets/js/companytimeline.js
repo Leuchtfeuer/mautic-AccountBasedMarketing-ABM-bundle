@@ -8,14 +8,36 @@ mQuery(document).on('mautic:onPageLoad:after', function (event, container) {
         return;
     }
 
+    var searchTimer;
+    var requestId = 0;
+
     timelineForm.on('change', function () {
         timelineForm.submit();
     }).on('keyup', function () {
-        timelineForm.delay(200).submit();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+            timelineForm.submit();
+        }, 300);
     }).on('submit', function (e) {
         e.preventDefault();
-        Mautic.refreshLeadTimeline(timelineForm);
+        var currentId = ++requestId;
+        Mautic.postForm(timelineForm, function (response) {
+            if (currentId !== requestId) {
+                return;
+            }
+            response.target = '#timeline-table';
+            mQuery('#TimelineCount').html(response.timelineCount);
+            Mautic.processPageContent(response);
+        });
     });
 
-    Mautic.loadAndProcessPageContent('#timeline-table');
+    var loadTimeline = function () {
+        Mautic.loadAndProcessPageContent('#timeline-table');
+    };
+
+    if (mQuery('#company-timeline-container').hasClass('active')) {
+        loadTimeline();
+    } else {
+        mQuery('a[href="#company-timeline-container"]').one('shown.bs.tab', loadTimeline);
+    }
 });
