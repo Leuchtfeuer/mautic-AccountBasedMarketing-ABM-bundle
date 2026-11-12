@@ -23,6 +23,7 @@ final class CompanyContactTimelineSubscriberFunctionalTest extends MauticMysqlTe
         $this->createCompanyLead($company, $this->createLead('John', '2026-01-01'));
         $this->createCompanyLead($company, $this->createLead('Jane', '2026-01-03'));
         $this->createCompanyLead($company, $this->createLead('Jack', '2026-01-02'));
+        $this->createLead('Other', '2026-01-04');
 
         $result = self::getContainer()->get(CompanyTimelineModel::class)
             ->getEngagements($company, ['includeEvents' => ['lead.create']], null, 1, 2);

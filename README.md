@@ -13,6 +13,7 @@ This plugin brings company-based Segments to Mautic and extends Mautic capabilit
 
 - Mautic 7.3+
 - PHP 8.2+
+- For the Company `History` tab: Mautic core with [#18106](https://github.com/mautic/mautic/pull/18106) (company view hooks) and [#TBD](https://github.com/mautic/mautic/pull/TBD) (timeline `leadIds` filter). Until they are released, apply them as Composer patches.
 
 ## Installation
 
