@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\EventListener;
 
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
+use Mautic\LeadBundle\Entity\Company;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +19,18 @@ final class IntegrationGuardSubscriberFunctionalTest extends MauticMysqlTestCase
         $this->publishAbmIntegration(false);
 
         $this->client->request(Request::METHOD_GET, '/s/company-segments/1');
+
+        $this->assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
+    }
+
+    public function testTimelineRouteIsNotFoundWhenIntegrationIsUnpublished(): void
+    {
+        $company = new Company();
+        $company->setName('Acme');
+        $this->em->persist($company);
+        $this->publishAbmIntegration(false);
+
+        $this->client->request(Request::METHOD_GET, '/s/company-timeline/'.$company->getId());
 
         $this->assertSame(Response::HTTP_NOT_FOUND, $this->client->getResponse()->getStatusCode());
     }
