@@ -11,8 +11,10 @@ use Mautic\LeadBundle\Entity\Lead;
 use Mautic\LeadBundle\Entity\LeadRepository;
 use Mautic\LeadBundle\Model\LeadModel;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanyTimelineEvent;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanyTimelineLeadIdsTypesEvent;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Adds the core contact timeline events of all contacts of the company.
@@ -20,7 +22,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 final readonly class CompanyContactTimelineSubscriber implements EventSubscriberInterface
 {
     /**
-     * Core types whose queries honour the leadIds filter, fetched with one call for all contacts.
+     * Default types whose queries honour the leadIds filter, fetched with one call for all contacts.
+     * Other plugins add their types via CompanyTimelineLeadIdsTypesEvent.
      * Other types are fetched per contact, as their listeners may ignore the filter.
      */
     private const LEAD_IDS_TYPES = [
@@ -28,6 +31,9 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
         'campaign.event',
         'campaign.event.scheduled',
         'campaign_membership',
+        'doi.verification.failure',
+        'doi.verification.skipped',
+        'doi.verification.success',
         'dynamic.content.sent',
         'email.failed',
         'email.read',
@@ -50,6 +56,7 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
         'page.hit',
         'page.videohit',
         'point.gained',
+        'propagatebounce',
         'segment_membership',
         'sms.failed',
         'sms.sent',
@@ -64,6 +71,7 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
         private Connection $connection,
         private CorePermissions $security,
         private UserHelper $userHelper,
+        private EventDispatcherInterface $dispatcher,
     ) {
     }
 
@@ -104,7 +112,8 @@ final readonly class CompanyContactTimelineSubscriber implements EventSubscriber
             'dateTo'        => $options['toDate'],
         ];
 
-        $leadIdsTypes    = array_values(array_intersect($applicableTypes, self::LEAD_IDS_TYPES));
+        $supportedTypes  = $this->dispatcher->dispatch(new CompanyTimelineLeadIdsTypesEvent(self::LEAD_IDS_TYPES))->getTypes();
+        $leadIdsTypes    = array_values(array_intersect($applicableTypes, $supportedTypes));
         $perContactTypes = array_values(array_diff($applicableTypes, $leadIdsTypes));
 
         if ([] !== $leadIdsTypes) {

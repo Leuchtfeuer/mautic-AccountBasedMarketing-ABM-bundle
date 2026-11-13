@@ -90,6 +90,44 @@ POST /api/companysegments/{id}/companies/add
 POST /api/companysegments/{id}/company/{companyId}/remove
 ```
 
+## Known issues
+
+The Company `History` tab loads timeline events of all Contacts of the Company with one query set. This works for core, DOI and PropagateBounce events, and for plugins that register their event types (see [Company timeline for plugin developers](#company-timeline-for-plugin-developers)).
+
+> [!WARNING]
+> Timeline events of all other plugins are loaded **per Contact**: each Contact triggers its own set of queries, on every page, search and filter change. The query count grows linearly with the number of Contacts. For a Company with 1,000 Contacts this means thousands of queries per request, which can overload the database and make the `History` tab time out.
+>
+> To avoid it, exclude these event types in the filter, or register them as described below if their queries support the `leadIds` filter.
+
+## Company timeline for plugin developers
+
+If your plugin adds Contact timeline events and its queries support the core `leadIds` filter (for example via `TimelineEventLogTrait`), register the event types so that they are loaded for all Contacts at once:
+
+```php
+use Symfony\Contracts\EventDispatcher\Event;
+
+private const ABM_LEAD_IDS_TYPES_EVENT = 'MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Event\CompanyTimelineLeadIdsTypesEvent';
+
+public static function getSubscribedEvents(): array
+{
+    return [
+        self::ABM_LEAD_IDS_TYPES_EVENT => 'onCompanyTimelineLeadIdsTypes',
+    ];
+}
+
+public function onCompanyTimelineLeadIdsTypes(Event $event): void
+{
+    if (method_exists($event, 'addType')) {
+        $event->addType('myplugin.event_type');
+    }
+}
+```
+
+The event name is a plain string, so your plugin does not depend on this plugin: without it, the event is never dispatched and the listener never runs.
+
+> [!WARNING]
+> Only register types whose queries apply the `leadIds` filter. Otherwise the Company timeline shows events of all Contacts in the instance.
+
 ## Troubleshooting
 
 Make sure you have not only installed but also enabled the Plugin.
