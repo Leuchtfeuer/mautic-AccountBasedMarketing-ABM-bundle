@@ -161,6 +161,27 @@ class SegmentCompanyRepository extends CommonRepository
     }
 
     /**
+     * @param int[] $segmentIds
+     *
+     * @return int[]
+     */
+    public function getCompanyIdsInAllSegments(array $segmentIds): array
+    {
+        $segmentIds = array_values(array_unique($segmentIds));
+
+        return array_map(intval(...), $this->createQueryBuilder('sc')
+            ->select('IDENTITY(sc.company)')
+            ->where('sc.companySegment IN (:segmentIds)')
+            ->andWhere('sc.manuallyRemoved = false')
+            ->groupBy('sc.company')
+            ->having('COUNT(DISTINCT sc.companySegment) = :segmentCount')
+            ->setParameter('segmentIds', $segmentIds)
+            ->setParameter('segmentCount', count($segmentIds))
+            ->getQuery()
+            ->getSingleColumnResult());
+    }
+
+    /**
      * @param int[] $expectedSegmentIds
      *
      * @return int[]
