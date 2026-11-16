@@ -9,7 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 
-class DashboardCompanySegmentType extends AbstractType
+final class DashboardCompanySegmentType extends AbstractType
 {
     public function __construct(
         private readonly CompanySegmentRepository $companySegmentRepository,

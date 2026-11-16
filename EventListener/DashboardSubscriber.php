@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use Mautic\DashboardBundle\Event\WidgetDetailEvent;
+use Mautic\DashboardBundle\Event\WidgetFormEvent;
+use Mautic\DashboardBundle\Event\WidgetTypeListEvent;
 use Mautic\DashboardBundle\EventListener\DashboardSubscriber as OriginalDashboardSubscriber;
 use Mautic\LeadBundle\Entity\Company;
 use Mautic\LeadBundle\Entity\CompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\DashboardCompanySegmentType;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use Symfony\Component\Routing\RouterInterface;
 
-class DashboardSubscriber extends OriginalDashboardSubscriber
+final class DashboardSubscriber extends OriginalDashboardSubscriber
 {
     /**
      * @var string
@@ -40,12 +43,31 @@ class DashboardSubscriber extends OriginalDashboardSubscriber
         private readonly RouterInterface $router,
         private readonly CompanyRepository $companyRepository,
         private readonly SegmentCompanyRepository $segmentCompanyRepository,
+        private readonly Config $config,
     ) {
+    }
+
+    public function onWidgetListGenerate(WidgetTypeListEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        parent::onWidgetListGenerate($event);
+    }
+
+    public function onWidgetFormGenerate(WidgetFormEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        parent::onWidgetFormGenerate($event);
     }
 
     public function onWidgetDetailGenerate(WidgetDetailEvent $event): void
     {
-        if ('company.list' !== $event->getType()) {
+        if ('company.list' !== $event->getType() || !$this->config->isPublished()) {
             return;
         }
 

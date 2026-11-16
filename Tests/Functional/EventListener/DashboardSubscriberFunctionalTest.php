@@ -6,11 +6,14 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functiona
 
 use Mautic\CacheBundle\Cache\CacheProviderInterface;
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
+use Mautic\DashboardBundle\DashboardEvents;
 use Mautic\DashboardBundle\Entity\Widget;
+use Mautic\DashboardBundle\Event\WidgetTypeListEvent;
 use Mautic\LeadBundle\Entity\Company;
 use Mautic\UserBundle\Entity\User;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
 use Symfony\Component\DomCrawler\Crawler;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 final class DashboardSubscriberFunctionalTest extends MauticMysqlTestCase
 {
@@ -42,6 +45,20 @@ final class DashboardSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $this->assertSame(['ID', 'Company Name', 'Company Website'], $crawler->filter('table thead th')->each(fn (Crawler $th): string => trim($th->text())));
         $this->assertSame(['In both new', 'In both old'], $crawler->filter('table tbody tr td:nth-child(2)')->each(fn (Crawler $td): string => trim($td->text())));
+    }
+
+    public function testWidgetIsHiddenWhenIntegrationIsUnpublished(): void
+    {
+        $this->publishAbmIntegration(false);
+
+        $event = new WidgetTypeListEvent();
+        self::getContainer()->get(EventDispatcherInterface::class)->dispatch($event, DashboardEvents::DASHBOARD_ON_MODULE_LIST_GENERATE);
+        $this->assertArrayNotHasKey('mautic.abm.dashboard.widgets', $event->getTypes());
+
+        $segment = $this->createCompanySegment('Segment A', 'segment-a');
+        $this->addCompanyToCompanySegment($this->createDatedCompany('In A', '2024-01-01'), $segment);
+
+        $this->assertCount(0, $this->renderWidget([$segment->getId()])->filter('table'));
     }
 
     /**
