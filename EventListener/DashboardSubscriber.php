@@ -18,7 +18,7 @@ final class DashboardSubscriber extends OriginalDashboardSubscriber
     /**
      * @var string
      */
-    protected $bundle = 'abm';
+    protected $bundle = 'companylistwidget';
 
     /**
      * @var array<string, array<string, string>>
@@ -106,9 +106,9 @@ final class DashboardSubscriber extends OriginalDashboardSubscriber
 
         $event->setTemplateData([
             'headItems' => [
-                'mautic.widget.company.segments.id',
-                'mautic.widget.company.segments.name',
-                'mautic.widget.company.segments.website',
+                'mautic.widget.company.list.id',
+                'mautic.widget.company.list.name',
+                'mautic.widget.company.list.website',
             ],
             'bodyItems' => $items,
         ]);

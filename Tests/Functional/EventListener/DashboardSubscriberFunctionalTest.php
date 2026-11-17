@@ -53,7 +53,7 @@ final class DashboardSubscriberFunctionalTest extends MauticMysqlTestCase
 
         $event = new WidgetTypeListEvent();
         self::getContainer()->get(EventDispatcherInterface::class)->dispatch($event, DashboardEvents::DASHBOARD_ON_MODULE_LIST_GENERATE);
-        $this->assertArrayNotHasKey('mautic.abm.dashboard.widgets', $event->getTypes());
+        $this->assertArrayNotHasKey('mautic.companylistwidget.dashboard.widgets', $event->getTypes());
 
         $segment = $this->createCompanySegment('Segment A', 'segment-a');
         $this->addCompanyToCompanySegment($this->createDatedCompany('In A', '2024-01-01'), $segment);

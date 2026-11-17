@@ -21,7 +21,7 @@ final class DashboardCompanySegmentType extends AbstractType
         $segmentNames = array_column($this->companySegmentRepository->getSegments(), 'name', 'id');
 
         $builder->add('companysegments', ChoiceType::class, [
-            'label'        => 'mautic.widget.company.segments.filter',
+            'label'        => 'mautic.widget.company.segment.filter',
             'multiple'     => true,
             'choices'      => array_keys($segmentNames),
             'choice_label' => fn (int|string $id): string => $segmentNames[$id],
@@ -31,9 +31,9 @@ final class DashboardCompanySegmentType extends AbstractType
         ]);
 
         $builder->add('order', ChoiceType::class, [
-            'label'      => 'mautic.widget.company.segments.ordertitle',
+            'label'      => 'mautic.widget.company.list.ordertitle',
             'multiple'   => false,
-            'choices'    => ['mautic.widget.company.segments.orderbydatecreated' => 1],
+            'choices'    => ['mautic.widget.company.list.orderbydatecreated' => 1],
             'label_attr' => ['class' => 'control-label'],
             'attr'       => ['class' => 'form-control'],
             'required'   => false,
