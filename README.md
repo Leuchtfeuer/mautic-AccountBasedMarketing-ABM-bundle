@@ -59,6 +59,8 @@ In Campaigns, you now have a new Condition called `Company Segments`. It checks 
 
 In Dynamic Content, you can filter on Company Segment membership.
 
+In the Dashboard, the Widget `Company List` (section `Company Widgets`) shows the newest Companies, optionally filtered to those in all selected Company Segments. Its output is cached (`cached_data_timeout`, default 10 minutes).
+
 To update the Company Segments based on their filters, there is a console command to be used as a cron job:
 
 ```
