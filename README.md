@@ -58,6 +58,8 @@ In Campaigns, you now have a new Condition called `Company Segments`. It checks 
 
 In Dynamic Content, you can filter on Company Segment membership.
 
+In Reports, you now have a new data source `Company Segments` that allows you to filter on Company Segments.
+
 To update the Company Segments based on their filters, there is a console command to be used as a cron job:
 
 ```

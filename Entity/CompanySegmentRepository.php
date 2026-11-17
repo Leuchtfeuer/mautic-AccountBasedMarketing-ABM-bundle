@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity;
 
 use Mautic\CoreBundle\Entity\CommonRepository;
+use Symfony\Component\Validator\Exception\UnexpectedTypeException;
 
 /**
  * @extends CommonRepository<CompanySegment>
@@ -97,5 +98,43 @@ class CompanySegmentRepository extends CommonRepository
         ];
 
         return array_merge($commands, parent::getSearchCommands());
+    }
+
+    /**
+     * @param array<int> $ids
+     *
+     * @return array<int, CompanySegment>
+     */
+    public function getSegmentObjectsViaListOfIDs(array $ids = []): array
+    {
+        $q = $this->getEntityManager()->createQueryBuilder()
+            ->from(CompanySegment::class, CompanySegment::DEFAULT_ALIAS, CompanySegment::DEFAULT_ALIAS.'.id');
+
+        $q->select('cs')
+            ->andWhere($q->expr()->eq(CompanySegment::DEFAULT_ALIAS.'.isPublished', ':true'))
+            ->setParameter('true', true, 'boolean');
+
+        if ([] !== $ids) {
+            $q->andWhere($q->expr()->in(CompanySegment::DEFAULT_ALIAS.'.id', $ids));
+        }
+
+        $return = $q->getQuery()->getResult();
+
+        if (!is_array($return)) {
+            throw new UnexpectedTypeException($return, 'array');
+        }
+
+        foreach ($return as $index => $item) {
+            if (!is_int($index)) {
+                throw new UnexpectedTypeException($index, 'int');
+            }
+
+            if (!$item instanceof CompanySegment) {
+                throw new UnexpectedTypeException($index, CompanySegment::class);
+            }
+        }
+
+        /** @var array<int, CompanySegment> $return */
+        return $return;
     }
 }
