@@ -14,14 +14,14 @@ final class SegmentCompanyRepositoryTest extends MauticMysqlTestCase
 {
     use CreateCompanySegmentTestEntitiesTrait;
 
-    public function testGetCompanyIdsInAllSegments(): void
+    public function testGetNewestCompaniesInAllSegments(): void
     {
         $segmentA = $this->createCompanySegment('Segment A', 'segment-a');
         $segmentB = $this->createCompanySegment('Segment B', 'segment-b');
 
-        $inBoth       = $this->createCompany('In both');
-        $onlyInA      = $this->createCompany('Only in A');
-        $removedFromB = $this->createCompany('Removed from B');
+        $inBoth       = $this->createCompany('In both', '2024-01-01');
+        $onlyInA      = $this->createCompany('Only in A', '2024-01-03');
+        $removedFromB = $this->createCompany('Removed from B', '2024-01-02');
 
         foreach ([$inBoth, $onlyInA, $removedFromB] as $company) {
             $this->addCompanyToCompanySegment($company, $segmentA);
@@ -34,19 +34,24 @@ final class SegmentCompanyRepositoryTest extends MauticMysqlTestCase
         $this->assertInstanceOf(SegmentCompanyRepository::class, $repository);
 
         $this->assertSame(
-            [$inBoth->getId()],
-            $repository->getCompanyIdsInAllSegments([$segmentA->getId(), $segmentB->getId()])
+            [$inBoth],
+            $repository->getNewestCompaniesInAllSegments([$segmentA->getId(), $segmentB->getId(), $segmentB->getId()], 10)
         );
-
-        $companyIdsInA = $repository->getCompanyIdsInAllSegments([$segmentA->getId()]);
-        sort($companyIdsInA);
-        $this->assertSame([$inBoth->getId(), $onlyInA->getId(), $removedFromB->getId()], $companyIdsInA);
+        $this->assertSame(
+            [$onlyInA, $removedFromB, $inBoth],
+            $repository->getNewestCompaniesInAllSegments([$segmentA->getId()], 10)
+        );
+        $this->assertSame(
+            [$onlyInA, $removedFromB],
+            $repository->getNewestCompaniesInAllSegments([], 2)
+        );
     }
 
-    private function createCompany(string $name): Company
+    private function createCompany(string $name, string $dateAdded): Company
     {
         $company = new Company();
         $company->setName($name);
+        $company->setDateAdded(new \DateTime($dateAdded));
         $this->em->persist($company);
         $this->em->flush();
 

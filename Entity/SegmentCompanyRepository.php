@@ -7,6 +7,7 @@ namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Mautic\CoreBundle\Entity\CommonRepository;
+use Mautic\LeadBundle\Entity\Company;
 
 /**
  * @extends CommonRepository<SegmentCompany>
@@ -163,22 +164,31 @@ class SegmentCompanyRepository extends CommonRepository
     /**
      * @param int[] $segmentIds
      *
-     * @return int[]
+     * @return Company[]
      */
-    public function getCompanyIdsInAllSegments(array $segmentIds): array
+    public function getNewestCompaniesInAllSegments(array $segmentIds, int $limit): array
     {
-        $segmentIds = array_values(array_unique($segmentIds));
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->select('c')
+            ->from(Company::class, 'c')
+            ->orderBy('c.dateAdded', 'DESC')
+            ->setMaxResults($limit);
 
-        return array_map(intval(...), $this->createQueryBuilder('sc')
-            ->select('IDENTITY(sc.company)')
-            ->where('sc.companySegment IN (:segmentIds)')
-            ->andWhere('sc.manuallyRemoved = false')
-            ->groupBy('sc.company')
-            ->having('COUNT(DISTINCT sc.companySegment) = :segmentCount')
-            ->setParameter('segmentIds', $segmentIds)
-            ->setParameter('segmentCount', count($segmentIds))
-            ->getQuery()
-            ->getSingleColumnResult());
+        if ([] !== $segmentIds) {
+            $segmentIds = array_values(array_unique($segmentIds));
+            $sub        = $this->createQueryBuilder('sc')
+                ->select('IDENTITY(sc.company)')
+                ->where('sc.companySegment IN (:segmentIds)')
+                ->andWhere('sc.manuallyRemoved = false')
+                ->groupBy('sc.company')
+                ->having('COUNT(DISTINCT sc.companySegment) = :segmentCount');
+
+            $qb->andWhere('c.id IN ('.$sub->getDQL().')')
+                ->setParameter('segmentIds', $segmentIds)
+                ->setParameter('segmentCount', count($segmentIds));
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     /**

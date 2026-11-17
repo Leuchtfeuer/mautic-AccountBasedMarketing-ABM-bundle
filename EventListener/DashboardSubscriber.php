@@ -8,8 +8,6 @@ use Mautic\DashboardBundle\Event\WidgetDetailEvent;
 use Mautic\DashboardBundle\Event\WidgetFormEvent;
 use Mautic\DashboardBundle\Event\WidgetTypeListEvent;
 use Mautic\DashboardBundle\EventListener\DashboardSubscriber as OriginalDashboardSubscriber;
-use Mautic\LeadBundle\Entity\Company;
-use Mautic\LeadBundle\Entity\CompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Form\Type\DashboardCompanySegmentType;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
@@ -41,7 +39,6 @@ final class DashboardSubscriber extends OriginalDashboardSubscriber
 
     public function __construct(
         private readonly RouterInterface $router,
-        private readonly CompanyRepository $companyRepository,
         private readonly SegmentCompanyRepository $segmentCompanyRepository,
         private readonly Config $config,
     ) {
@@ -71,6 +68,11 @@ final class DashboardSubscriber extends OriginalDashboardSubscriber
             return;
         }
 
+        $this->checkPermissions($event);
+        if ($event->isPropagationStopped()) {
+            return;
+        }
+
         if ($event->isCached()) {
             $this->finalizeWidget($event);
 
@@ -79,7 +81,7 @@ final class DashboardSubscriber extends OriginalDashboardSubscriber
 
         $selectedSegments = array_map(intval(...), (array) ($event->getWidget()->getParams()['companysegments'] ?? []));
         $limit            = max(1, (int) round((($event->getWidget()->getHeight() - 80) / 35) - 1));
-        $companies        = $this->getNewestCompanies($selectedSegments, $limit);
+        $companies        = $this->segmentCompanyRepository->getNewestCompaniesInAllSegments($selectedSegments, $limit);
 
         $items = [];
         foreach ($companies as $company) {
@@ -112,21 +114,6 @@ final class DashboardSubscriber extends OriginalDashboardSubscriber
         ]);
 
         $this->finalizeWidget($event);
-    }
-
-    /**
-     * @param array<int> $selectedSegments
-     *
-     * @return array<Company>
-     */
-    private function getNewestCompanies(array $selectedSegments, int $limit): array
-    {
-        $criteria = [];
-        if ([] !== $selectedSegments) {
-            $criteria['id'] = $this->segmentCompanyRepository->getCompanyIdsInAllSegments($selectedSegments);
-        }
-
-        return $this->companyRepository->findBy($criteria, ['dateAdded' => 'DESC'], $limit);
     }
 
     private function finalizeWidget(WidgetDetailEvent $event): void
