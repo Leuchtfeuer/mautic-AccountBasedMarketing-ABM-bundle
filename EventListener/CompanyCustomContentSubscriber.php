@@ -8,6 +8,7 @@ use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomContentEvent;
 use Mautic\LeadBundle\Entity\Company;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanyTimelineController;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanyTimelineModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -21,17 +22,21 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
         private Config $config,
         private CompanyTimelineModel $companyTimelineModel,
         private RequestStack $requestStack,
+        private SegmentCompanyRepository $segmentCompanyRepository,
     ) {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => ['injectContent', 0],
+            CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => [
+                ['injectTimelineContent', 0],
+                ['injectCompanySegmentContent', 0],
+            ],
         ];
     }
 
-    public function injectContent(CustomContentEvent $event): void
+    public function injectTimelineContent(CustomContentEvent $event): void
     {
         if (!$this->config->isPublished()) {
             return;
@@ -56,6 +61,22 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
                 'filters' => $filters + ['search' => '', 'includeEvents' => [], 'excludeEvents' => []],
                 'types'   => $this->companyTimelineModel->getEngagementTypes(),
             ],
+        ]);
+    }
+
+    public function injectCompanySegmentContent(CustomContentEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        $company = $event->getVars()['company'] ?? null;
+        if (!$company instanceof Company || !$event->checkContext(self::COMPANY_VIEW, 'company.sidebar.bottom')) {
+            return;
+        }
+
+        $event->addTemplate('@LeuchtfeuerAccountBasedMarketingAbm/Company/company_segments.html.twig', [
+            'companySegments' => $this->segmentCompanyRepository->getSegmentsOfCompany((int) $company->getId()),
         ]);
     }
 }
