@@ -8,7 +8,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Query\Expression\ExpressionBuilder;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Mautic\ChannelBundle\Helper\ChannelListHelper;
-use Mautic\LeadBundle\Model\CompanyReportData;
+use Mautic\LeadBundle\Report\FieldsBuilder;
 use Mautic\ReportBundle\Entity\Report;
 use Mautic\ReportBundle\Event\ReportBuilderEvent;
 use Mautic\ReportBundle\Event\ReportFilterConditionEvent;
@@ -109,11 +109,10 @@ final class ReportSubscriberTest extends TestCase
         $config = $this->createStub(Config::class);
         $config->method('isPublished')->willReturn($published);
 
-        $companyReportData = $this->createStub(CompanyReportData::class);
-        $companyReportData->method('getCompanyData')->willReturn([
-            'comp.id'                   => ['label' => 'ID', 'type' => 'int'],
-            'comp.companyname'          => ['label' => 'Name', 'type' => 'string'],
-            'companies_lead.is_primary' => ['label' => 'Primary', 'type' => 'bool'],
+        $fieldsBuilder = $this->createStub(FieldsBuilder::class);
+        $fieldsBuilder->method('getCompanyFieldsColumns')->willReturn([
+            'comp.id'          => ['label' => 'ID', 'type' => 'int'],
+            'comp.companyname' => ['label' => 'Name', 'type' => 'string'],
         ]);
 
         $companySegmentModel = $this->createStub(CompanySegmentModel::class);
@@ -122,7 +121,7 @@ final class ReportSubscriberTest extends TestCase
             ['id' => '2', 'name' => 'Segment B', 'alias' => 'b', 'createdBy' => null],
         ]);
 
-        return new ReportSubscriber($config, $companyReportData, $companySegmentModel, $this->connection);
+        return new ReportSubscriber($config, $fieldsBuilder, $companySegmentModel, $this->connection);
     }
 
     private function createBuilderEvent(): ReportBuilderEvent

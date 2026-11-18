@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use Doctrine\DBAL\Connection;
-use Mautic\LeadBundle\Model\CompanyReportData;
+use Mautic\LeadBundle\Report\FieldsBuilder;
 use Mautic\ReportBundle\Event\ReportBuilderEvent;
 use Mautic\ReportBundle\Event\ReportFilterConditionEvent;
 use Mautic\ReportBundle\Event\ReportGeneratorEvent;
@@ -21,28 +21,9 @@ final readonly class ReportSubscriber implements EventSubscriberInterface
 
     public const SEGMENT_FILTER_COLUMN = 'csx.segment_id';
 
-    private const COMPANY_COLUMNS = [
-        'comp.id',
-        'comp.companyaddress1',
-        'comp.companyaddress2',
-        'comp.companyemail',
-        'comp.companyphone',
-        'comp.companycity',
-        'comp.companystate',
-        'comp.companyzipcode',
-        'comp.companycountry',
-        'comp.companyname',
-        'comp.companywebsite',
-        'comp.companynumber_of_employees',
-        'comp.companyfax',
-        'comp.companyannual_revenue',
-        'comp.companyindustry',
-        'comp.companydescription',
-    ];
-
     public function __construct(
         private Config $config,
-        private CompanyReportData $companyReportData,
+        private FieldsBuilder $fieldsBuilder,
         private CompanySegmentModel $companySegmentModel,
         private Connection $db,
     ) {
@@ -63,8 +44,7 @@ final readonly class ReportSubscriber implements EventSubscriberInterface
             return;
         }
 
-        $columns = array_intersect_key($this->companyReportData->getCompanyData(), array_flip(self::COMPANY_COLUMNS));
-
+        $columns = $this->fieldsBuilder->getCompanyFieldsColumns('comp.');
         $filters = $columns;
 
         // TODO: remove the check and require the Mautic version with ReportFilterConditionEvent in composer.json.
