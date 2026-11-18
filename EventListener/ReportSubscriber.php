@@ -5,337 +5,125 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\Query\Expression\CompositeExpression;
-use Doctrine\DBAL\Query\QueryBuilder;
-use Mautic\CoreBundle\Helper\InputHelper;
 use Mautic\LeadBundle\Model\CompanyReportData;
 use Mautic\ReportBundle\Event\ReportBuilderEvent;
+use Mautic\ReportBundle\Event\ReportFilterConditionEvent;
 use Mautic\ReportBundle\Event\ReportGeneratorEvent;
 use Mautic\ReportBundle\ReportEvents;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-class ReportSubscriber implements EventSubscriberInterface
+final readonly class ReportSubscriber implements EventSubscriberInterface
 {
-    public const CONTEXT_COMPANY_SEGMENTS         = 'company_segments';
-    public const COMPANY_TABLE                    = 'companies';
-    public const COMPANIES_PREFIX                 = 'comp';
-    public const SEGMENT_COMPANY_PREFIX     = 'csx';
-    public const COMPANY_SEGMENTS_XREF_TABLE      = SegmentCompany::TABLE_NAME;
+    public const CONTEXT_COMPANY_SEGMENTS = 'company_segments';
+
+    public const SEGMENT_FILTER_COLUMN = 'csx.segment_id';
+
+    private const COMPANY_COLUMNS = [
+        'comp.id',
+        'comp.companyaddress1',
+        'comp.companyaddress2',
+        'comp.companyemail',
+        'comp.companyphone',
+        'comp.companycity',
+        'comp.companystate',
+        'comp.companyzipcode',
+        'comp.companycountry',
+        'comp.companyname',
+        'comp.companywebsite',
+        'comp.companynumber_of_employees',
+        'comp.companyfax',
+        'comp.companyannual_revenue',
+        'comp.companyindustry',
+        'comp.companydescription',
+    ];
 
     public function __construct(
-        private readonly Config $config,
-        private readonly CompanyReportData $companyReportData,
-        private readonly CompanySegmentRepository $companySegmentRepository,
-        private readonly Connection $db,
+        private Config $config,
+        private CompanyReportData $companyReportData,
+        private CompanySegmentModel $companySegmentModel,
+        private Connection $db,
     ) {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            ReportEvents::REPORT_ON_BUILD    => ['onReportBuilder', 0],
-            ReportEvents::REPORT_ON_GENERATE => ['onReportGenerate', 0],
+            ReportEvents::REPORT_ON_BUILD     => 'onReportBuilder',
+            ReportEvents::REPORT_ON_GENERATE  => 'onReportGenerate',
+            ReportFilterConditionEvent::class => 'onFilterCondition',
         ];
     }
 
     public function onReportBuilder(ReportBuilderEvent $event): void
     {
-        if (!$this->config->isPublished()) {
+        if (!$this->config->isPublished() || !$event->checkContext([self::CONTEXT_COMPANY_SEGMENTS])) {
             return;
         }
 
-        if (!$event->checkContext([self::CONTEXT_COMPANY_SEGMENTS])) {
-            return;
+        $columns = array_intersect_key($this->companyReportData->getCompanyData(), array_flip(self::COMPANY_COLUMNS));
+
+        $filters = $columns;
+
+        // TODO: remove the check and require the Mautic version with ReportFilterConditionEvent in composer.json.
+        if (class_exists(ReportFilterConditionEvent::class)) {
+            $filters[self::SEGMENT_FILTER_COLUMN] = [
+                'alias'     => 'companysegments',
+                'label'     => 'mautic.company_segments.report.company_segments',
+                'type'      => 'multiselect',
+                'list'      => array_column($this->companySegmentModel->getCompanySegments(), 'name', 'id'),
+                'operators' => [
+                    'in'       => 'mautic.core.operator.in',
+                    'notIn'    => 'mautic.core.operator.notin',
+                    'empty'    => 'mautic.core.operator.isempty',
+                    'notEmpty' => 'mautic.core.operator.isnotempty',
+                ],
+            ];
         }
-
-        $keys = [
-            'comp.id',
-            'comp.companyaddress1',
-            'comp.companyaddress2',
-            'comp.companyemail',
-            'comp.companyphone',
-            'comp.companycity',
-            'comp.companystate',
-            'comp.companyzipcode',
-            'comp.companycountry',
-            'comp.companyname',
-            'comp.companywebsite',
-            'comp.companynumber_of_employees',
-            'comp.companyfax',
-            'comp.companyannual_revenue',
-            'comp.companyindustry',
-            'comp.companydescription',
-        ];
-        $columns         = $this->companyReportData->getCompanyData();
-        $filteredColumns = array_intersect_key($columns, array_flip($keys));
-
-        $segmentList = $this->getFilterSegments();
-
-        $filters                                                   = $filteredColumns;
-        $filters[self::SEGMENT_COMPANY_PREFIX.'.segment_id'] = [
-            'alias'     => 'companysegments',
-            'label'     => 'mautic.company_segments.report.company_segments',
-            'type'      => 'select',
-            'list'      => $segmentList,
-            'operators' => [
-                'in'       => 'mautic.core.operator.in',
-                'notIn'    => 'mautic.core.operator.notin',
-                'empty'    => 'mautic.core.operator.isempty',
-                'notEmpty' => 'mautic.core.operator.isnotempty',
-            ],
-        ];
 
         $event->addTable(
             self::CONTEXT_COMPANY_SEGMENTS,
             [
                 'display_name' => 'mautic.company_segments.report.company_segments',
-                'columns'      => $filteredColumns,
+                'columns'      => $columns,
                 'filters'      => $filters,
             ],
             'companies'
         );
     }
 
-    /**
-     * @return array<int|string, string>
-     */
-    public function getFilterSegments(): array
-    {
-        $segments    = $this->companySegmentRepository->getSegmentObjectsViaListOfIDs();
-        /** @var array<string, string> $segmentList */
-        $segmentList = [];
-        foreach ($segments as $segment) {
-            $id               = (string) $segment->getId();
-            $segmentList[$id] = (string) $segment->getName();
-        }
-
-        return $segmentList;
-    }
-
-    /**
-     * Most of the code in this function was duplicated from the MauticReportBuilder as this option was preferred to making a patch.
-     */
     public function onReportGenerate(ReportGeneratorEvent $event): void
     {
         if (!$event->checkContext([self::CONTEXT_COMPANY_SEGMENTS])) {
             return;
         }
 
-        $qb       = $event->getQueryBuilder();
-        $filters  = $event->getReport()->getFilters();
-        $options  = $event->getOptions()['columns'];
-        $orGroups = [];
-        $andGroup = [];
-
-        $qb
-            ->from($this->getBaseTableName().self::COMPANY_TABLE, self::COMPANIES_PREFIX);
-
-        $expr     = $qb->expr();
-
-        if (count($filters) > 0) {
-            foreach ($filters as $i => $filter) {
-                /** @var array<string,mixed> $filter */
-                if (!is_array($filter)) {
-                    continue;
-                }
-                if (!array_key_exists('expr', $filter) && !array_key_exists('condition', $filter) && !array_key_exists('column', $filter)) {
-                    continue;
-                }
-                if (!is_string($filter['column'])) {
-                    continue;
-                }
-                $exprFunction = $filter['expr'] ?? $filter['condition'];
-
-                $paramName    = sprintf('i%dc%s', $i, InputHelper::alphanum($filter['column']));
-
-                if (array_key_exists('glue', $filter) && 'or' === $filter['glue']) {
-                    $orGroups[] = CompositeExpression::and(...$andGroup);
-                    $andGroup   = [];
-                }
-
-                $companySegmentCondition = $this->getCompanySegmentCondition($filter);
-                if (!is_null($companySegmentCondition)) {
-                    $andGroup[] = $companySegmentCondition;
-                    continue;
-                }
-                switch ($exprFunction) {
-                    case 'notEmpty':
-                        $andGroup[] = $expr->isNotNull($filter['column']);
-                        if ($this->doesColumnSupportEmptyValue($filter, $options)) {
-                            $andGroup[] = $expr->neq($filter['column'], $expr->literal(''));
-                        }
-                        break;
-                    case 'empty':
-                        $expression = $qb->expr()->or(
-                            $qb->expr()->isNull($filter['column'])
-                        );
-                        if ($this->doesColumnSupportEmptyValue($filter, $options)) {
-                            $expression = $expression->with(
-                                $qb->expr()->eq($filter['column'], $expr->literal(''))
-                            );
-                        }
-
-                        $andGroup[] = $expression;
-                        break;
-                    case 'neq':
-                        $columnValue = ":$paramName";
-                        $expression  = $qb->expr()->or(
-                            $qb->expr()->isNull($filter['column']),
-                            $qb->expr()->$exprFunction($filter['column'], $columnValue)
-                        );
-                        $qb->setParameter($paramName, $filter['value']);
-                        $andGroup[] = $expression;
-                        break;
-                    default:
-                        if (!is_string($filter['value']) || '' === trim($filter['value'])) {
-                            // Ignore empty
-                            break;
-                        }
-
-                        $columnValue = ":$paramName";
-                        $type        = $options[$filter['column']]['type'];
-                        if (isset($options[$filter['column']]['formula'])) {
-                            $filter['column'] = $options[$filter['column']]['formula'];
-                        }
-
-                        switch ($type) {
-                            case 'bool':
-                            case 'boolean':
-                                if ((int) $filter['value'] > 1) {
-                                    // Ignore the "reset" value of "2"
-                                    break 2;
-                                }
-
-                                $qb->setParameter($paramName, $filter['value'], 'boolean');
-                                break;
-
-                            case 'float':
-                                $columnValue = (float) $filter['value'];
-                                break;
-
-                            case 'int':
-                            case 'integer':
-                                $columnValue = (int) $filter['value'];
-                                break;
-
-                            case 'string':
-                            case 'email':
-                            case 'url':
-                                switch ($exprFunction) {
-                                    case 'like':
-                                    case 'notLike':
-                                        $filter['value'] = !str_contains($filter['value'], '%') ? '%'.$filter['value'].'%' : $filter['value'];
-                                        break;
-                                    case 'startsWith':
-                                        $exprFunction    = 'like';
-                                        $filter['value'] .= '%';
-                                        break;
-                                    case 'endsWith':
-                                        $exprFunction    = 'like';
-                                        $filter['value'] = '%'.$filter['value'];
-                                        break;
-                                    case 'contains':
-                                        $exprFunction    = 'like';
-                                        $filter['value'] = '%'.$filter['value'].'%';
-                                        break;
-                                }
-
-                                $qb->setParameter($paramName, $filter['value']);
-                                break;
-
-                            default:
-                                $qb->setParameter($paramName, $filter['value']);
-                        }
-                        $andGroup[] = $expr->{$exprFunction}($filter['column'], $columnValue);
-                }
-            }
-        }
-
-        if (boolval($orGroups)) {
-            // Add the remaining $andGroup to the rest of the $orGroups if exists so we don't miss it.
-            $orGroups[] = CompositeExpression::and(...$andGroup);
-            $qb->andWhere(CompositeExpression::or(...$orGroups));
-        } elseif (boolval($andGroup)) {
-            $qb->andWhere(CompositeExpression::and(...$andGroup));
-        }
-
-        $event->getReport()->setFilters([]);
+        $queryBuilder = $event->getQueryBuilder()->from(MAUTIC_TABLE_PREFIX.'companies', 'comp');
+        $event->applyDateFilters($queryBuilder, 'date_added', 'comp');
     }
 
-    /**
-     * @param array<string, mixed> $filter
-     */
-    public function getCompanySegmentCondition(array $filter): ?string
+    public function onFilterCondition(ReportFilterConditionEvent $event): void
     {
-        if (!$this->checkIfCompanySegmentFilter($filter)) {
-            return null;
+        $filter = $event->getFilter();
+        if (!$event->checkContext(self::CONTEXT_COMPANY_SEGMENTS) || self::SEGMENT_FILTER_COLUMN !== $filter['column']) {
+            return;
         }
 
-        $segmentSubQuery = $this->prepareSegmentSubQuery();
+        $subQuery = $this->db->createQueryBuilder()
+            ->select('csx.company_id')
+            ->from(MAUTIC_TABLE_PREFIX.SegmentCompany::TABLE_NAME, 'csx')
+            ->where('csx.manually_removed = 0');
 
-        return $this->finalizeSubQuery($segmentSubQuery, $filter);
-    }
-
-    /**
-     * @param array<string, mixed> $filter
-     */
-    private function checkIfCompanySegmentFilter(array $filter): bool
-    {
-        return self::SEGMENT_COMPANY_PREFIX.'.segment_id' === $filter['column'];
-    }
-
-    private function prepareSegmentSubQuery(): QueryBuilder
-    {
-        return $this->db->createQueryBuilder()->select('DISTINCT '.self::SEGMENT_COMPANY_PREFIX.'.company_id')
-            ->from($this->getBaseTableName().self::COMPANY_SEGMENTS_XREF_TABLE, self::SEGMENT_COMPANY_PREFIX)
-            ->where(self::SEGMENT_COMPANY_PREFIX.'.manually_removed = 0');
-    }
-
-    /**
-     * @param array<string, mixed> $filter
-     */
-    private function finalizeSubQuery(QueryBuilder $segmentSubQuery, array $filter): string
-    {
-        if (in_array($filter['condition'], ['in', 'notIn'], true) && !is_null($filter['value'])) {
-            $segmentSubQuery->andWhere($segmentSubQuery->expr()->in(self::SEGMENT_COMPANY_PREFIX.'.segment_id', $filter['value']));
+        if (in_array($filter['condition'], ['in', 'notIn'], true) && !empty($filter['value'])) {
+            $segmentIds = array_map(static fn ($value): string => (string) (int) $value, (array) $filter['value']);
+            $subQuery->andWhere($subQuery->expr()->in('csx.segment_id', $segmentIds));
         }
 
-        $subQuery = $segmentSubQuery->getSQL();
-
-        if (in_array($filter['condition'], ['in', 'notEmpty'], true)) {
-            return $segmentSubQuery->expr()->in(self::COMPANIES_PREFIX.'.id', '('.$subQuery.')');
-        } elseif (in_array($filter['condition'], ['notIn', 'empty'], true)) {
-            return $segmentSubQuery->expr()->notIn(self::COMPANIES_PREFIX.'.id', '('.$subQuery.')');
-        }
-
-        throw new \InvalidArgumentException('Invalid filter condition');
-    }
-
-    /**
-     * This code was duplicated from the MauticReportBuilder as this option was preferred to making a patch.
-     *
-     * @param array<string, mixed>                 $filter
-     * @param array<string, array<string, string>> $filterDefinitions
-     */
-    private function doesColumnSupportEmptyValue(array $filter, array $filterDefinitions): bool
-    {
-        if (!array_key_exists('column', $filter) || !is_string($filter['column'])) {
-            return false;
-        }
-        $type = $filterDefinitions[$filter['column']]['type'] ?? null;
-
-        return !in_array($type, ['date', 'datetime'], true);
-    }
-
-    private function getBaseTableName(): string
-    {
-        if (is_string(MAUTIC_TABLE_PREFIX)) {
-            return MAUTIC_TABLE_PREFIX;
-        }
-
-        return '';
+        $expr = $event->getQueryBuilder()->expr();
+        $event->setCondition(in_array($filter['condition'], ['in', 'notEmpty'], true)
+            ? $expr->in('comp.id', $subQuery->getSQL())
+            : $expr->notIn('comp.id', $subQuery->getSQL()));
     }
 }

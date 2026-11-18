@@ -5,415 +5,145 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Unit\EventListener;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Query\Expression\ExpressionBuilder;
 use Doctrine\DBAL\Query\QueryBuilder;
 use Mautic\ChannelBundle\Helper\ChannelListHelper;
 use Mautic\LeadBundle\Model\CompanyReportData;
-use Mautic\LeadBundle\Segment\Query\Expression\ExpressionBuilder;
+use Mautic\ReportBundle\Entity\Report;
 use Mautic\ReportBundle\Event\ReportBuilderEvent;
+use Mautic\ReportBundle\Event\ReportFilterConditionEvent;
+use Mautic\ReportBundle\Event\ReportGeneratorEvent;
 use Mautic\ReportBundle\Helper\ReportHelper;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
-use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegmentRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener\ReportSubscriber;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
-use PHPUnit\Framework\MockObject\MockObject;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
+use PHPUnit\Framework\Attributes\RequiresMethod;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class ReportSubscriberTest extends TestCase
 {
-    private ReportSubscriber $reportSubscriber;
-    /** @var MockObject&ReportBuilderEvent */
-    private MockObject $reportBuilderEventMock;
-    /** @var MockObject&CompanyReportData */
-    private MockObject $companyReportDataMock;
-    /** @var MockObject&CompanySegmentRepository */
-    private MockObject $companySegmentRepositoryMock;
-    /** @var MockObject&QueryBuilder */
-    private MockObject $queryBuilderMock;
-    /** @var MockObject&ExpressionBuilder */
-    private MockObject $exprMock;
+    /** @var Stub&Connection */
+    private Stub $connection;
 
-    /**
-     * @var array<string, array<string, string>>
-     */
-    private array $columns;
+    private ChannelListHelper $channelListHelper;
 
     protected function setUp(): void
     {
-        $this->columns = [
-            'comp.id' => [
-                'alias' => 'comp_id',
-                'label' => 'mautic.lead.report.company.company_id',
-                'type'  => 'int',
-                'link'  => 'mautic_company_action',
-            ],
-            'companies_lead.is_primary' => [
-                'label' => 'mautic.lead.report.company.is_primary',
-                'type'  => 'bool',
-            ],
-            'companies_lead.date_added' => [
-                'label' => 'mautic.lead.report.company.date_added',
-                'type'  => 'datetime',
-            ],
-            'comp.companyaddress1' => [
-                'label' => 'Company Address 1',
-                'type'  => 'string',
-            ],
-            'comp.companyaddress2' => [
-                'label' => 'Company Address 2',
-                'type'  => 'string',
-            ],
-            'comp.companyemail' => [
-                'label' => 'Company Company Email',
-                'type'  => 'email',
-            ],
-            'comp.companyphone' => [
-                'label' => 'Company Phone',
-                'type'  => 'string',
-            ],
-            'comp.companycity' => [
-                'label' => 'Company City',
-                'type'  => 'string',
-            ],
-            'comp.companystate' => [
-                'label' => 'Company State',
-                'type'  => 'string',
-            ],
-            'comp.companyzipcode' => [
-                'label' => 'Company Zip Code',
-                'type'  => 'string',
-            ],
-            'comp.companycountry' => [
-                'label' => 'Company Country',
-                'type'  => 'string',
-            ],
-            'comp.companyname' => [
-                'label' => 'Company Company Name',
-                'type'  => 'string',
-            ],
-            'comp.companywebsite' => [
-                'label' => 'Company Website',
-                'type'  => 'url',
-            ],
-            'comp.companynumber_of_employees' => [
-                'label' => 'Company Number of Employees',
-                'type'  => 'float',
-            ],
-            'comp.companyfax' => [
-                'label' => 'Company Fax',
-                'type'  => 'string',
-            ],
-            'comp.companyannual_revenue' => [
-                'label' => 'Company Annual Revenue',
-                'type'  => 'float',
-            ],
-            'comp.companyindustry' => [
-                'label' => 'Company Industry',
-                'type'  => 'string',
-            ],
-            'comp.companydescription' => [
-                'label' => 'Company Description',
-                'type'  => 'string',
-            ],
-        ];
+        $this->connection = $this->createStub(Connection::class);
+        $this->connection->method('createQueryBuilder')->willReturnCallback(fn (): QueryBuilder => new QueryBuilder($this->connection));
+        $this->connection->method('getExpressionBuilder')->willReturn(new ExpressionBuilder($this->connection));
 
-        $configMock                   = $this->createMock(Config::class);
-        $configMock->method('isPublished')->willReturn(true);
-        $this->companyReportDataMock        = $this->createMock(CompanyReportData::class);
-        $this->companySegmentRepositoryMock = $this->createMock(CompanySegmentRepository::class);
-        $dbMock                       = $this->createMock(Connection::class);
-        $translatorMock               = $this->createMock(TranslatorInterface::class);
-        $channelListHelperMock        = $this->createMock(ChannelListHelper::class);
-        $this->queryBuilderMock             = $this->createMock(QueryBuilder::class);
-        $this->queryBuilderMock->method('select')->willReturnSelf();
-        $this->queryBuilderMock->method('from')->willReturnSelf();
-        $this->queryBuilderMock->method('andWhere')->willReturnSelf();
-        $this->exprMock = $this->createMock(ExpressionBuilder::class);
-        $this->queryBuilderMock->method('expr')->willReturn($this->exprMock);
+        $this->channelListHelper = $this->createStub(ChannelListHelper::class);
+    }
 
-        $reportHelper = new ReportHelper($this->createStub(EventDispatcherInterface::class));
+    #[RequiresMethod(ReportFilterConditionEvent::class, 'setCondition')]
+    public function testOnReportBuilderAddsCompanySegmentsTable(): void
+    {
+        $event = $this->createBuilderEvent();
+        $this->createSubscriber()->onReportBuilder($event);
 
-        $this->reportBuilderEventMock = $this->getMockBuilder(ReportBuilderEvent::class)
-            ->setConstructorArgs([
-                $translatorMock,
-                $channelListHelperMock,
-                'company_segments', // context
-                [],
-                $reportHelper,
-                null,
-            ])
-            ->onlyMethods(['checkContext'])
-            ->getMock();
+        $table = $event->getTables()[ReportSubscriber::CONTEXT_COMPANY_SEGMENTS];
+        $this->assertSame(['comp.id', 'comp.companyname'], array_keys($table['columns']));
+        $this->assertSame(['comp.id', 'comp.companyname', ReportSubscriber::SEGMENT_FILTER_COLUMN], array_keys($table['filters']));
+        $this->assertSame('multiselect', $table['filters'][ReportSubscriber::SEGMENT_FILTER_COLUMN]['type']);
+        $this->assertSame(['1' => 'Segment A', '2' => 'Segment B'], $table['filters'][ReportSubscriber::SEGMENT_FILTER_COLUMN]['list']);
+    }
 
-        // Set up the dbMock to return the queryBuilderMock
-        $dbMock->method('createQueryBuilder')->willReturn($this->queryBuilderMock);
+    public function testOnReportBuilderDoesNothingWhenPluginIsUnpublished(): void
+    {
+        $event = $this->createBuilderEvent();
+        $this->createSubscriber(false)->onReportBuilder($event);
 
-        $this->reportSubscriber = new ReportSubscriber(
-            $configMock,
-            $this->companyReportDataMock,
-            $this->companySegmentRepositoryMock,
-            $dbMock
+        $this->assertSame([], $event->getTables());
+    }
+
+    public function testOnReportGenerateSetsCompaniesTable(): void
+    {
+        $report = (new Report())->setSource(ReportSubscriber::CONTEXT_COMPANY_SEGMENTS);
+        $event  = new ReportGeneratorEvent($report, [], new QueryBuilder($this->connection), $this->channelListHelper);
+
+        $this->createSubscriber()->onReportGenerate($event);
+
+        $this->assertSame(
+            'SELECT  FROM '.MAUTIC_TABLE_PREFIX.'companies comp WHERE comp.date_added IS NULL OR (comp.date_added BETWEEN :dateFrom AND :dateTo)',
+            $event->getQueryBuilder()->getSQL()
+        );
+    }
+
+    #[RequiresMethod(ReportFilterConditionEvent::class, 'setCondition')]
+    public function testOnFilterConditionCastsSegmentIdsToInt(): void
+    {
+        $event = $this->createFilterEvent(ReportSubscriber::CONTEXT_COMPANY_SEGMENTS, ReportSubscriber::SEGMENT_FILTER_COLUMN, 'in', ['1) OR (1=1', '2']);
+
+        $this->createSubscriber()->onFilterCondition($event);
+
+        $this->assertStringContainsString('csx.segment_id IN (1, 2)', (string) $event->getCondition());
+        $this->assertStringNotContainsString('1=1', (string) $event->getCondition());
+    }
+
+    #[RequiresMethod(ReportFilterConditionEvent::class, 'setCondition')]
+    public function testOnFilterConditionIgnoresOtherColumns(): void
+    {
+        $event = $this->createFilterEvent(ReportSubscriber::CONTEXT_COMPANY_SEGMENTS, 'comp.companyname', 'eq', 'Acme');
+
+        $this->createSubscriber()->onFilterCondition($event);
+
+        $this->assertNull($event->getCondition());
+    }
+
+    #[RequiresMethod(ReportFilterConditionEvent::class, 'setCondition')]
+    public function testOnFilterConditionIgnoresOtherContexts(): void
+    {
+        $event = $this->createFilterEvent('leads', ReportSubscriber::SEGMENT_FILTER_COLUMN, 'in', ['1']);
+
+        $this->createSubscriber()->onFilterCondition($event);
+
+        $this->assertNull($event->getCondition());
+    }
+
+    private function createSubscriber(bool $published = true): ReportSubscriber
+    {
+        $config = $this->createStub(Config::class);
+        $config->method('isPublished')->willReturn($published);
+
+        $companyReportData = $this->createStub(CompanyReportData::class);
+        $companyReportData->method('getCompanyData')->willReturn([
+            'comp.id'                   => ['label' => 'ID', 'type' => 'int'],
+            'comp.companyname'          => ['label' => 'Name', 'type' => 'string'],
+            'companies_lead.is_primary' => ['label' => 'Primary', 'type' => 'bool'],
+        ]);
+
+        $companySegmentModel = $this->createStub(CompanySegmentModel::class);
+        $companySegmentModel->method('getCompanySegments')->willReturn([
+            ['id' => '1', 'name' => 'Segment A', 'alias' => 'a', 'createdBy' => null],
+            ['id' => '2', 'name' => 'Segment B', 'alias' => 'b', 'createdBy' => null],
+        ]);
+
+        return new ReportSubscriber($config, $companyReportData, $companySegmentModel, $this->connection);
+    }
+
+    private function createBuilderEvent(): ReportBuilderEvent
+    {
+        return new ReportBuilderEvent(
+            $this->createStub(TranslatorInterface::class),
+            $this->channelListHelper,
+            ReportSubscriber::CONTEXT_COMPANY_SEGMENTS,
+            [],
+            new ReportHelper($this->createStub(EventDispatcherInterface::class))
         );
     }
 
     /**
-     * @return array<int, CompanySegment>
+     * @param string|string[] $value
      */
-    private function createFakeCompanySegments(): array
+    private function createFilterEvent(string $source, string $column, string $condition, string|array $value): ReportFilterConditionEvent
     {
-        $segments = [];
-        for ($i = 1; $i <= 4; ++$i) {
-            $segment = $this->createMock(CompanySegment::class);
-            $segment->method('getId')->willReturn($i);
-            $segment->method('getName')->willReturn(chr(96 + $i)); // 'a', 'b', 'c', 'd'
-            $segments[$i] = $segment;
-        }
+        $report = (new Report())->setSource($source);
+        $filter = ['column' => $column, 'condition' => $condition, 'value' => $value, 'glue' => 'and'];
 
-        return $segments;
-    }
-
-    public function testOnReportBuilderAddsCompanySegmentsToReportWithCorrectColumnsAndFilters(): void
-    {
-        $this->reportBuilderEventMock->expects($this->once())
-            ->method('checkContext')
-            ->willReturn(true);
-
-        $this->companyReportDataMock->expects($this->once())
-            ->method('getCompanyData')
-            ->willReturn($this->columns);
-
-        $fakeSegments = $this->createFakeCompanySegments();
-        $this->companySegmentRepositoryMock->expects($this->once())
-            ->method('getSegmentObjectsViaListOfIDs')
-            ->willReturn($fakeSegments);
-
-        $this->reportSubscriber->onReportBuilder($this->reportBuilderEventMock);
-        $tables = $this->reportBuilderEventMock->getTables();
-
-        $this->assertArrayHasKey('company_segments', $tables);
-        $this->assertIsArray($tables['company_segments']);
-        $this->assertArrayHasKey('columns', $tables['company_segments']);
-        $this->assertArrayHasKey('filters', $tables['company_segments']);
-        $this->assertIsArray($tables['company_segments']['columns']);
-        $this->assertIsArray($tables['company_segments']['filters']);
-        $this->assertCount(16, $tables['company_segments']['columns']);
-        $this->assertCount(17, $tables['company_segments']['filters']);
-
-        $segmentFilter = $tables['company_segments']['filters'][ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id'];
-        $this->assertIsArray($segmentFilter);
-        $this->assertArrayHasKey('list', $segmentFilter);
-        $this->assertIsArray($segmentFilter['list']);
-        $this->assertCount(4, $segmentFilter['list']);
-        $this->assertEquals(['1' => 'a', '2' => 'b', '3' => 'c', '4' => 'd'], $segmentFilter['list']);
-    }
-
-    public function testOnReportBuilderHandlesEmptySegmentListCorrectly(): void
-    {
-        $this->reportBuilderEventMock->expects($this->once())
-            ->method('checkContext')
-            ->willReturn(true);
-
-        $this->companyReportDataMock->expects($this->once())
-            ->method('getCompanyData')
-            ->willReturn($this->columns);
-
-        $this->companySegmentRepositoryMock->expects($this->once())
-            ->method('getSegmentObjectsViaListOfIDs')
-            ->willReturn([]);
-
-        $this->reportSubscriber->onReportBuilder($this->reportBuilderEventMock);
-        $tables        = $this->reportBuilderEventMock->getTables();
-
-        $this->assertArrayHasKey('company_segments', $tables);
-        $this->assertIsArray($tables['company_segments']);
-        $this->assertArrayHasKey('columns', $tables['company_segments']);
-        $this->assertIsArray($tables['company_segments']['columns']);
-        $this->assertArrayHasKey('filters', $tables['company_segments']);
-        $this->assertIsArray($tables['company_segments']['filters']);
-        $this->assertCount(16, $tables['company_segments']['columns']);
-        $this->assertCount(17, $tables['company_segments']['filters']);
-
-        $segmentFilter = $tables['company_segments']['filters'][ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id'];
-
-        $this->assertIsArray($segmentFilter);
-        $this->assertArrayHasKey('list', $segmentFilter);
-        $this->assertEmpty($segmentFilter['list']);
-
-        $this->assertEquals('select', $segmentFilter['type']);
-        $this->assertArrayHasKey('operators', $segmentFilter);
-        $this->assertIsArray($segmentFilter['operators']);
-        $this->assertCount(4, $segmentFilter['operators']);
-    }
-
-    public function testOnReportBuilderWithWrongContext(): void
-    {
-        $this->reportBuilderEventMock->expects($this->once())
-            ->method('checkContext')
-            ->willReturn(false);
-        $this->reportSubscriber->onReportBuilder($this->reportBuilderEventMock);
-    }
-
-    public function testGetCompanySegmentConditionWrongFilterColumn(): void
-    {
-        $filter = [
-            'column' => 'abcd',
-        ];
-
-        $result = $this->reportSubscriber->getCompanySegmentCondition($filter);
-        $this->assertEquals(null, $result);
-    }
-
-    public function testGetCompanySegmentConditionWhenOperatorEqualsIn(): void
-    {
-        $filterSubQueryResult = 'filter sub query';
-        $filterResult         = 'filter result';
-        $subQueryResult       = 'sub query';
-        $filterValue          = '3';
-
-        $this->queryBuilderMock->expects($this->once())
-            ->method('andWhere')
-            ->with($filterSubQueryResult);
-        $this->expectManuallyRemovedCompaniesExcluded();
-        $this->queryBuilderMock->expects($this->once())
-            ->method('getSQL')
-            ->willReturn($subQueryResult);
-
-        $this->exprMock
-            ->expects($this->exactly(2))
-            ->method('in')
-            ->willReturnCallback(static function (string $field, string $value) use ($subQueryResult, $filterValue, $filterResult, $filterSubQueryResult): string {
-                if ($field === ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id') {
-                    self::assertSame($filterValue, $value);
-
-                    return $filterSubQueryResult;
-                }
-
-                if ($field === ReportSubscriber::COMPANIES_PREFIX.'.id') {
-                    self::assertSame('('.$subQueryResult.')', $value);
-
-                    return $filterResult;
-                }
-
-                self::fail('Unknown field: '.$field);
-            });
-
-        $filter = [
-            'column'    => ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id',
-            'glue'      => 'and',
-            'dynamic'   => null,
-            'condition' => 'in',
-            'value'     => $filterValue,
-        ];
-
-        $this->assertSame($filterResult, $this->reportSubscriber->getCompanySegmentCondition($filter));
-    }
-
-    public function testGetCompanySegmentConditionWhenOperatorEqualsNotIn(): void
-    {
-        $filterSubQueryResult = 'filter sub query';
-        $filterResult         = 'filter result';
-        $subQueryResult       = 'sub query';
-        $filterValue          = '3';
-
-        $this->queryBuilderMock->expects($this->once())
-            ->method('andWhere')
-            ->with($filterSubQueryResult);
-        $this->expectManuallyRemovedCompaniesExcluded();
-        $this->queryBuilderMock->expects($this->once())
-            ->method('getSQL')
-            ->willReturn($subQueryResult);
-
-        $this->exprMock
-            ->expects($this->once())
-            ->method('in')
-            ->willReturnCallback(static function (string $field, string $value) use ($filterValue, $filterSubQueryResult): string {
-                self::assertSame($filterValue, $value);
-
-                return $filterSubQueryResult;
-            });
-
-        $this->exprMock
-            ->expects($this->once())
-            ->method('notIn')
-            ->willReturnCallback(static function (string $field, string $value) use ($subQueryResult, $filterResult): string {
-                self::assertSame('('.$subQueryResult.')', $value);
-
-                return $filterResult;
-            });
-
-        $filter = [
-            'column'    => ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id',
-            'glue'      => 'and',
-            'dynamic'   => null,
-            'condition' => 'notIn',
-            'value'     => '3',
-        ];
-
-        $this->assertSame($filterResult, $this->reportSubscriber->getCompanySegmentCondition($filter));
-    }
-
-    public function testGetCompanySegmentConditionWhenOperatorEqualsEmpty(): void
-    {
-        $filterResult         = 'filter result';
-        $subQueryResult       = 'sub query';
-        $this->expectManuallyRemovedCompaniesExcluded();
-        $this->queryBuilderMock->expects($this->once())
-            ->method('getSQL')
-            ->willReturn($subQueryResult);
-
-        $this->exprMock
-            ->expects($this->once())
-            ->method('notIn')
-            ->willReturnCallback(static function (string $field, string $value) use ($subQueryResult, $filterResult): string {
-                self::assertSame('('.$subQueryResult.')', $value);
-
-                return $filterResult;
-            });
-
-        $filter = [
-            'column'    => ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id',
-            'glue'      => 'and',
-            'dynamic'   => null,
-            'condition' => 'empty',
-        ];
-
-        $this->assertSame($filterResult, $this->reportSubscriber->getCompanySegmentCondition($filter));
-    }
-
-    public function testGetCompanySegmentConditionWhenOperatorEqualsNotEmpty(): void
-    {
-        $filterResult         = 'filter result';
-        $subQueryResult       = 'sub query';
-        $this->expectManuallyRemovedCompaniesExcluded();
-        $this->queryBuilderMock->expects($this->once())
-            ->method('getSQL')
-            ->willReturn($subQueryResult);
-
-        $this->exprMock
-            ->expects($this->once())
-            ->method('in')
-            ->willReturnCallback(static function (string $field, string $value) use ($subQueryResult, $filterResult): string {
-                self::assertSame('('.$subQueryResult.')', $value);
-
-                return $filterResult;
-            });
-
-        $filter = [
-            'column'    => ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.segment_id',
-            'glue'      => 'and',
-            'dynamic'   => null,
-            'condition' => 'notEmpty',
-        ];
-
-        $this->assertSame($filterResult, $this->reportSubscriber->getCompanySegmentCondition($filter));
-    }
-
-    private function expectManuallyRemovedCompaniesExcluded(): void
-    {
-        $this->queryBuilderMock->expects($this->once())
-            ->method('where')
-            ->with(ReportSubscriber::SEGMENT_COMPANY_PREFIX.'.manually_removed = 0')
-            ->willReturnSelf();
+        return new ReportFilterConditionEvent($report, $filter, [], new QueryBuilder($this->connection));
     }
 }
