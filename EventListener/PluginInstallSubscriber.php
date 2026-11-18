@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\EventListener;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
+use Mautic\IntegrationsBundle\Migration\Engine;
 use Mautic\PluginBundle\Event\PluginInstallEvent;
 use Mautic\PluginBundle\PluginEvents;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
@@ -29,6 +31,7 @@ final readonly class PluginInstallSubscriber implements EventSubscriberInterface
 
     public function __construct(
         private Connection $connection,
+        private EntityManagerInterface $entityManager,
         #[Autowire(env: 'MAUTIC_TABLE_PREFIX')]
         ?string $tablePrefix,
     ) {
@@ -36,12 +39,15 @@ final readonly class PluginInstallSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * @return array<string, array{0: string, 1: int}>
+     * @return array<string, list<array{0: string, 1: int}>>
      */
     public static function getSubscribedEvents(): array
     {
         return [
-            PluginEvents::ON_PLUGIN_INSTALL => ['onPluginInstall', 100],
+            PluginEvents::ON_PLUGIN_INSTALL => [
+                ['onPluginInstall', 100],
+                ['runMigrations', -10],
+            ],
         ];
     }
 
@@ -57,6 +63,19 @@ final readonly class PluginInstallSubscriber implements EventSubscriberInterface
         }
 
         $this->reconcileLegacySchema();
+    }
+
+    /**
+     * Runs after the core schema creation, so migrations only add tables the
+     * core skipped because legacy tables already existed.
+     */
+    public function runMigrations(PluginInstallEvent $event): void
+    {
+        if (!$event->checkContext(self::PLUGIN_NAME)) {
+            return;
+        }
+
+        (new Engine($this->entityManager, $this->prefix, dirname(__DIR__), 'LeuchtfeuerAccountBasedMarketingAbmBundle'))->up();
     }
 
     private function reconcileLegacySchema(): void

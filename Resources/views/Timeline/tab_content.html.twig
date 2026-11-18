@@ -1,0 +1,10 @@
+<div class="tab-pane fade bdr-w-0" id="company-timeline-container">
+    {{ include('@LeuchtfeuerAccountBasedMarketingAbm/Timeline/_list_filter_form.html.twig') }}
+    <script>
+        mauticLang['showMore'] = '{{ 'mautic.core.more.show'|trans }}';
+        mauticLang['hideMore'] = '{{ 'mautic.core.more.hide'|trans }}';
+    </script>
+    <div id="timeline-table" data-target-url="{{ path('mautic_company_timeline_action', {'companyId': company.id}) }}">
+        <div class="spinner"><i class="fa fa-spin fa-spinner"></i></div>
+    </div>
+</div>
