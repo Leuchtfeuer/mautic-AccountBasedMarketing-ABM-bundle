@@ -1,0 +1,67 @@
+<div class="pa-12">
+    {% set segmentHeader %}
+        <div class="d-flex justify-content-between">
+            <span class="fw-b ellipsis mb-16">{{ 'mautic.company_segments.header.index'|trans }}</span>
+            <i class="ri-pie-chart-line" aria-hidden="true"></i>
+        </div>
+    {% endset %}
+
+    {% if companySegments is not empty %}
+        {% set classes = ['gray', 'red', 'magenta', 'purple', 'blue', 'cyan', 'teal', 'green'] %}
+
+        {% if companySegments|length <= 8 %}
+            {% set content %}
+                {{ segmentHeader }}
+                <div class="d-flex flex-wrap gap-xs">
+                    {% for segment in companySegments %}
+                        {{ _self.render_segment(segment, classes) }}
+                    {% endfor %}
+                </div>
+            {% endset %}
+
+            {% include '@MauticCore/Components/tile.html.twig' with {'type': 'base', 'content': content} %}
+        {% else %}
+            {% set aboveContent %}
+                {{ segmentHeader }}
+                <div class="d-flex flex-wrap gap-xs">
+                    {% for segment in companySegments|slice(0, 8) %}
+                        {{ _self.render_segment(segment, classes) }}
+                    {% endfor %}
+                </div>
+            {% endset %}
+
+            {% set belowContent %}
+                <div class="d-flex flex-wrap gap-xs mt-5">
+                    {% for segment in companySegments|slice(8) %}
+                        {{ _self.render_segment(segment, classes) }}
+                    {% endfor %}
+                </div>
+            {% endset %}
+
+            {% include '@MauticCore/Components/tile.html.twig' with {
+                'type': 'expandable-interactive',
+                'aboveFoldContent': aboveContent,
+                'belowFoldContent': belowContent
+            } %}
+        {% endif %}
+    {% else %}
+        {% set content %}
+            {{ segmentHeader }}
+            <p class="text-helper">{{ 'mautic.company_segments.company.no_results'|trans }}</p>
+            <div class="clearfix"></div>
+        {% endset %}
+
+        {% include '@MauticCore/Components/tile.html.twig' with {'type': 'base', 'content': content} %}
+    {% endif %}
+</div>
+
+{% macro render_segment(segment, classes) %}
+    {% include '@MauticCore/Helper/_tag.html.twig' with {'tags': [{
+        'label': segment.name|purify,
+        'attributes': {
+            'href': path('mautic_company_segments_action', {'objectAction': 'view', 'objectId': segment.id}),
+            'data-toggle': 'ajax'
+        },
+        'color': cycle(classes, segment.id)
+    }]} %}
+{% endmacro %}

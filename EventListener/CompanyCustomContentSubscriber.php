@@ -16,7 +16,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 final readonly class CompanyCustomContentSubscriber implements EventSubscriberInterface
 {
-    private const COMPANY_VIEW = '@MauticLead/Company/company.html.twig';
+    private const COMPANY_VIEW      = '@MauticLead/Company/company.html.twig';
+    private const COMPANY_EDIT_VIEW = '@MauticLead/Company/form_standalone.html.twig';
 
     public function __construct(
         private Config $config,
@@ -31,7 +32,8 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
         return [
             CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => [
                 ['injectTimelineContent', 0],
-                ['injectCompanySegmentContent', 0],
+                ['injectCompanySegmentBubblesContent', 0],
+                ['injectModifyCompanySegmentsContent', 0],
             ],
         ];
     }
@@ -64,7 +66,7 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
         ]);
     }
 
-    public function injectCompanySegmentContent(CustomContentEvent $event): void
+    public function injectCompanySegmentBubblesContent(CustomContentEvent $event): void
     {
         if (!$this->config->isPublished()) {
             return;
@@ -78,5 +80,18 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
         $event->addTemplate('@LeuchtfeuerAccountBasedMarketingAbm/Company/company_segments.html.twig', [
             'companySegments' => $this->segmentCompanyRepository->getSegmentsOfCompany((int) $company->getId()),
         ]);
+    }
+
+    public function injectModifyCompanySegmentsContent(CustomContentEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        if (!$event->checkContext(self::COMPANY_EDIT_VIEW, 'company.form.sidebar')) {
+            return;
+        }
+
+        $event->addTemplate('@LeuchtfeuerAccountBasedMarketingAbm/Company/company_segments_form.html.twig');
     }
 }
