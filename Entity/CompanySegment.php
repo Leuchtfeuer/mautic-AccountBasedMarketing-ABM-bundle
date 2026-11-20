@@ -26,6 +26,8 @@ class CompanySegment extends FormEntity
 
     public const DEFAULT_ALIAS = 'cs';
 
+    public const ENTITY_NAME   = 'lead';
+
     private ?int $id = null;
 
     private ?string $name = null;

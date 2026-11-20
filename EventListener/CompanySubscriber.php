@@ -47,10 +47,11 @@ final readonly class CompanySubscriber implements EventSubscriberInterface
 
         $company = $event->getCompany();
 
-        $selectedSegmentIds = $this->getSelectedSegmentIds($companyData);
-        $currentSegmentIds  = array_map(
-            intval(...),
-            array_column($this->segmentCompanyRepository->getSegmentsOfCompany((int) $company->getId()), 'id')
+        $editableSegmentIds = array_map(intval(...), array_column($this->companySegmentModel->getEditableCompanySegments(), 'id'));
+        $selectedSegmentIds = array_intersect($this->getSelectedSegmentIds($companyData), $editableSegmentIds);
+        $currentSegmentIds  = array_intersect(
+            array_map(intval(...), array_column($this->segmentCompanyRepository->getSegmentsOfCompany((int) $company->getId()), 'id')),
+            $editableSegmentIds
         );
 
         $segmentsToAdd    = array_values(array_diff($selectedSegmentIds, $currentSegmentIds));

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\EventListener;
 
 use Mautic\CoreBundle\Test\MauticMysqlTestCase;
+use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
 use Mautic\LeadBundle\Entity\Company;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompany;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 final class CompanySubscriberFunctionalTest extends MauticMysqlTestCase
 {
     use CreateCompanySegmentTestEntitiesTrait;
+    use UserEntityTrait;
 
     protected function setUp(): void
     {
@@ -81,6 +83,52 @@ final class CompanySubscriberFunctionalTest extends MauticMysqlTestCase
         $this->assertResponseIsSuccessful();
 
         $this->assertSame([(int) $segment->getId()], $this->getSegmentIdsOfCompany($company));
+    }
+
+    public function testUserWithoutSegmentEditPermissionCannotChangeForeignSegments(): void
+    {
+        $user = $this->createUserWithPermission([
+            'email'      => 'own-lists@test.com',
+            'user-name'  => 'own-lists',
+            'first-name' => 'Own',
+            'last-name'  => 'Lists',
+            'role'       => ['name' => 'Own lists', 'permissions' => ['lead:leads' => 1024, 'lead:lists' => 2 | 4 | 8]],
+        ]);
+        $this->em->flush();
+
+        $company         = $this->createCompany();
+        $assignedForeign = $this->createCompanySegment('assigned-foreign', 'assigned-foreign');
+        $foreign         = $this->createCompanySegment('foreign', 'foreign');
+        $own             = $this->createCompanySegment('own', 'own');
+        $own->setCreatedBy($user);
+        $this->em->persist($own);
+        $this->em->flush();
+        $this->addCompanyToCompanySegment($company, $assignedForeign);
+
+        $this->loginOtherUser($user);
+
+        $crawler = $this->client->request(Request::METHOD_GET, '/s/companies/edit/'.$company->getId());
+        $this->assertResponseIsSuccessful();
+
+        $options = $crawler->filter('select[name="company[company_segments][]"] option');
+        $this->assertSame([(string) $assignedForeign->getId(), (string) $own->getId()], $options->extract(['value']));
+        $this->assertSame(['disabled', ''], $options->extract(['disabled']));
+        $this->assertSame(['selected', ''], $options->extract(['selected']));
+        $this->assertCount(1, $crawler->filter('label[for="company_company_segments"][data-bs-toggle="tooltip"]'));
+
+        $form   = $crawler->filter('form[name="company"]')->form();
+        $values = $form->getPhpValues();
+        $this->assertIsArray($values['company']);
+        $values['company']['company_segments'] = [(string) $own->getId()];
+        $this->client->request(Request::METHOD_POST, $form->getUri(), $values);
+        $this->assertResponseIsSuccessful();
+
+        $this->assertEqualsCanonicalizing([(int) $assignedForeign->getId(), (int) $own->getId()], $this->getSegmentIdsOfCompany($company));
+
+        $values['company']['company_segments'] = [(string) $own->getId(), (string) $foreign->getId()];
+        $this->client->request(Request::METHOD_POST, $form->getUri(), $values);
+
+        $this->assertNotContains((int) $foreign->getId(), $this->getSegmentIdsOfCompany($company));
     }
 
     private function createCompany(): Company

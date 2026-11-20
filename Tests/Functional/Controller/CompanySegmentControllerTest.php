@@ -344,6 +344,17 @@ final class CompanySegmentControllerTest extends MauticMysqlTestCase
         $this->assertStringNotContainsString('Admin Segment', (string) $this->client->getResponse()->getContent());
     }
 
+    public function testViewActionWorksWithoutAdminPermission(): void
+    {
+        $segment = $this->createCompanySegment('Admin Segment', 'admin-segment');
+
+        $this->loginOtherUser($this->createUserWithListPermissions(2 | 4));
+
+        $this->client->request(Request::METHOD_GET, '/s/company-segments/view/'.$segment->getId());
+
+        $this->assertResponseIsSuccessful();
+    }
+
     public function testIndexActionIsDeniedWithContactPermissionsOnly(): void
     {
         $this->loginOtherUser($this->createUserWithPermission([
