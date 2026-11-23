@@ -9,6 +9,7 @@ use Mautic\CoreBundle\Tests\Functional\CreateTestEntitiesTrait;
 use Mautic\CoreBundle\Tests\Functional\UserEntityTrait;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\CompanySegment;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Tests\Functional\CreateCompanySegmentTestEntitiesTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -168,17 +169,18 @@ final class BatchCompanySegmentControllerTest extends MauticMysqlTestCase
         $this->assertBatchRejected($segmentId);
     }
 
-    public function testUserWithoutViewOtherCannotUseForeignSegments(): void
+    #[DataProvider('segmentPermissionProvider')]
+    public function testUserWithoutSegmentEditPermissionCannotUseForeignSegments(int $segmentPermissions): void
     {
         [$segmentId, $companyId] = $this->createSegmentAndCompany();
 
-        // Segment is owned by admin; this user may edit contacts but only view own segments.
+        // Segment is owned by admin; this user may edit contacts but not edit foreign segments.
         $this->loginOtherUser($this->createUserWithPermission([
             'email'      => 'own-lists@test.com',
             'user-name'  => 'own-lists',
             'first-name' => 'Own',
             'last-name'  => 'Lists',
-            'role'       => ['name' => 'Own lists', 'permissions' => ['lead:leads' => 1024, 'lead:lists' => 2]],
+            'role'       => ['name' => 'Own lists', 'permissions' => ['lead:leads' => 1024, 'lead:lists' => $segmentPermissions]],
         ]));
 
         $this->client->request(Request::METHOD_GET, '/s/company-segments/batch/company/view', [], [], $this->createAjaxHeaders());
@@ -202,6 +204,15 @@ final class BatchCompanySegmentControllerTest extends MauticMysqlTestCase
         $this->client->request(Request::METHOD_POST, '/s/company-segments/batch/company/set', $payload);
 
         $this->assertBatchRejected($segmentId);
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function segmentPermissionProvider(): iterable
+    {
+        yield 'view own' => [2];
+        yield 'view other, edit own' => [2 | 4 | 8];
     }
 
     /**

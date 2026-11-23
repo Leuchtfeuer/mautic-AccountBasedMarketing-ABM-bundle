@@ -484,6 +484,21 @@ class CompanySegmentModel extends FormModel
     }
 
     /**
+     * @return array<array{id: string, name: string, alias: string, createdBy: int|null}>
+     */
+    public function getEditableCompanySegments(): array
+    {
+        return array_filter(
+            $this->getRepository()->getSegments(),
+            fn (array $segment): bool => $this->security->hasEntityAccess(
+                $this->getPermissionBase().':editown',
+                $this->getPermissionBase().':editother',
+                $segment['createdBy'] ?? 0
+            )
+        );
+    }
+
+    /**
      * @return array<string, array<string, mixed>>
      */
     public function getChoiceFields(): array

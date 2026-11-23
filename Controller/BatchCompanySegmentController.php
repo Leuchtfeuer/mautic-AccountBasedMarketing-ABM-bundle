@@ -78,7 +78,7 @@ final class BatchCompanySegmentController extends AbstractFormController
      */
     private function denyUnlessSegmentsArePermitted(array $segmentIds, CompanySegmentModel $companySegmentModel): void
     {
-        $permittedSegments = $companySegmentModel->getCompanySegments();
+        $permittedSegments = $companySegmentModel->getEditableCompanySegments();
 
         foreach ($segmentIds as $segmentId) {
             if (!isset($permittedSegments[$segmentId])) {

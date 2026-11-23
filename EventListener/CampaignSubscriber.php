@@ -16,11 +16,6 @@ use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanySegmentModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
-/**
- * Campaign action "Modify Company Segments" and condition "Company Segments"
- * for the contact's primary company (core PR 16025 added these to the core
- * CampaignSubscriber; keys are plugin-prefixed here).
- */
 final readonly class CampaignSubscriber implements EventSubscriberInterface
 {
     public const ACTION_CHANGE_COMPANY_SEGMENTS = 'leuchtfeuer.abm.changecompanysegments';

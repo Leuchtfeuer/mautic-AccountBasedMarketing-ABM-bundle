@@ -76,7 +76,7 @@ class CompanyBatchType extends AbstractType
         $resolver->setDefaults([
             'items' => function (Options $options): array {
                 $items = [];
-                foreach ($this->companySegmentModel->getCompanySegments() as $segment) {
+                foreach ($this->companySegmentModel->getEditableCompanySegments() as $segment) {
                     $items[$segment['name'].' ('.$segment['id'].')'] = (int) $segment['id'];
                 }
 
