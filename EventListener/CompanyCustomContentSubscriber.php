@@ -8,6 +8,7 @@ use Mautic\CoreBundle\CoreEvents;
 use Mautic\CoreBundle\Event\CustomContentEvent;
 use Mautic\LeadBundle\Entity\Company;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Controller\CompanyTimelineController;
+use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Entity\SegmentCompanyRepository;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Integration\Config;
 use MauticPlugin\LeuchtfeuerAccountBasedMarketingAbmBundle\Model\CompanyTimelineModel;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -15,23 +16,29 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 final readonly class CompanyCustomContentSubscriber implements EventSubscriberInterface
 {
-    private const COMPANY_VIEW = '@MauticLead/Company/company.html.twig';
+    private const COMPANY_VIEW      = '@MauticLead/Company/company.html.twig';
+    private const COMPANY_EDIT_VIEW = '@MauticLead/Company/form_standalone.html.twig';
 
     public function __construct(
         private Config $config,
         private CompanyTimelineModel $companyTimelineModel,
         private RequestStack $requestStack,
+        private SegmentCompanyRepository $segmentCompanyRepository,
     ) {
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => ['injectContent', 0],
+            CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => [
+                ['injectTimelineContent', 0],
+                ['injectCompanySegmentBubblesContent', 0],
+                ['injectModifyCompanySegmentsContent', 0],
+            ],
         ];
     }
 
-    public function injectContent(CustomContentEvent $event): void
+    public function injectTimelineContent(CustomContentEvent $event): void
     {
         if (!$this->config->isPublished()) {
             return;
@@ -57,5 +64,34 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
                 'types'   => $this->companyTimelineModel->getEngagementTypes(),
             ],
         ]);
+    }
+
+    public function injectCompanySegmentBubblesContent(CustomContentEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        $company = $event->getVars()['company'] ?? null;
+        if (!$company instanceof Company || !$event->checkContext(self::COMPANY_VIEW, 'company.sidebar.bottom')) {
+            return;
+        }
+
+        $event->addTemplate('@LeuchtfeuerAccountBasedMarketingAbm/Company/company_segments.html.twig', [
+            'companySegments' => $this->segmentCompanyRepository->getSegmentsOfCompany((int) $company->getId()),
+        ]);
+    }
+
+    public function injectModifyCompanySegmentsContent(CustomContentEvent $event): void
+    {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
+        if (!$event->checkContext(self::COMPANY_EDIT_VIEW, 'company.form.sidebar')) {
+            return;
+        }
+
+        $event->addTemplate('@LeuchtfeuerAccountBasedMarketingAbm/Company/company_segments_form.html.twig');
     }
 }

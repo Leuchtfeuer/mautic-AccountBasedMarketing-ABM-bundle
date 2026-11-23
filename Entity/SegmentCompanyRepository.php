@@ -161,6 +161,35 @@ class SegmentCompanyRepository extends CommonRepository
     }
 
     /**
+     * @return array<int, array{id: int|string, name: string, createdBy: int|string|null}>
+     */
+    public function getSegmentsOfCompany(int $companyId): array
+    {
+        $tableName            = MAUTIC_TABLE_PREFIX.SegmentCompany::TABLE_NAME;
+        $companySegmentsTable = MAUTIC_TABLE_PREFIX.CompanySegment::TABLE_NAME;
+
+        $sql = <<<SQL
+            SELECT cs.id, cs.name, cs.created_by AS createdBy
+            FROM $tableName sc
+            INNER JOIN $companySegmentsTable cs ON sc.segment_id = cs.id
+            WHERE sc.manually_removed = :manually_removed
+                AND sc.company_id = :company_id
+            ORDER BY cs.name
+            SQL;
+
+        /** @var array<int, array{id: int|string, name: string, createdBy: int|string|null}> $segments */
+        $segments = $this->getEntityManager()->getConnection()
+            ->executeQuery(
+                $sql,
+                ['company_id' => $companyId, 'manually_removed' => false],
+                ['company_id' => ParameterType::INTEGER, 'manually_removed' => ParameterType::BOOLEAN]
+            )
+            ->fetchAllAssociative();
+
+        return $segments;
+    }
+
+    /**
      * @param int[] $expectedSegmentIds
      *
      * @return int[]
