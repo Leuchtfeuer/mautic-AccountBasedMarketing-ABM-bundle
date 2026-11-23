@@ -38,7 +38,9 @@ class CompanySegmentActionType extends AbstractType
             $lockedSegmentIds[$field] = [];
             foreach ($this->companySegmentRepository->findBy(['id' => array_diff($savedSegmentIds, $editableChoices)]) as $segment) {
                 $choices[$segment->getName().' ('.$segment->getId().')'] = (int) $segment->getId();
-                $lockedSegmentIds[$field][]                              = (int) $segment->getId();
+                if (!$this->companySegmentModel->canEditCompanySegment($segment->getCreatedBy())) {
+                    $lockedSegmentIds[$field][] = (int) $segment->getId();
+                }
             }
             ksort($choices);
 

@@ -18,6 +18,8 @@ final class CompanySegmentActionTypeTest extends TypeTestCase
     private const EDITABLE_SEGMENT_ID = 1;
     private const FOREIGN_SEGMENT_ID  = 2;
     private const DELETED_SEGMENT_ID  = 3;
+    private const UNPUBLISHED_OWN_ID  = 4;
+    private const OWN_USER_ID         = 5;
 
     private MockObject&CompanySegmentModel $companySegmentModel;
 
@@ -29,15 +31,26 @@ final class CompanySegmentActionTypeTest extends TypeTestCase
         $foreignSegment->method('getId')->willReturn(self::FOREIGN_SEGMENT_ID);
         $foreignSegment->method('getName')->willReturn('Foreign');
 
+        $unpublishedOwnSegment = $this->createMock(CompanySegment::class);
+        $unpublishedOwnSegment->method('getId')->willReturn(self::UNPUBLISHED_OWN_ID);
+        $unpublishedOwnSegment->method('getName')->willReturn('Unpublished own');
+        $unpublishedOwnSegment->method('getCreatedBy')->willReturn(self::OWN_USER_ID);
+
         $this->companySegmentRepository = $this->createMock(CompanySegmentRepository::class);
         $this->companySegmentRepository->method('findBy')->willReturnCallback(
-            static fn (array $criteria): array => in_array(self::FOREIGN_SEGMENT_ID, $criteria['id'], true) ? [$foreignSegment] : []
+            static fn (array $criteria): array => array_values(array_filter(
+                [$foreignSegment, $unpublishedOwnSegment],
+                static fn (CompanySegment $segment): bool => in_array($segment->getId(), $criteria['id'], true)
+            ))
         );
 
         $this->companySegmentModel = $this->createMock(CompanySegmentModel::class);
         $this->companySegmentModel->method('getEditableCompanySegments')->willReturn([
             ['id' => (string) self::EDITABLE_SEGMENT_ID, 'name' => 'Editable', 'alias' => 'editable', 'createdBy' => null],
         ]);
+        $this->companySegmentModel->method('canEditCompanySegment')->willReturnCallback(
+            static fn (?int $createdBy): bool => self::OWN_USER_ID === $createdBy
+        );
 
         parent::setUp();
     }
@@ -82,5 +95,23 @@ final class CompanySegmentActionTypeTest extends TypeTestCase
         $form->submit(['addToLists' => [(string) self::FOREIGN_SEGMENT_ID]]);
 
         $this->assertFalse($form->isValid());
+    }
+
+    public function testSavedUnpublishedSegmentWithEditPermissionCanBeRemoved(): void
+    {
+        $form = $this->factory->create(CompanySegmentActionType::class, [
+            'addToLists'      => [(string) self::UNPUBLISHED_OWN_ID],
+            'removeFromLists' => [],
+        ]);
+
+        $view   = $form->createView();
+        $choice = array_values(array_filter($view['addToLists']->vars['choices'], static fn ($choice): bool => (string) self::UNPUBLISHED_OWN_ID === $choice->value))[0];
+        $this->assertSame([], $choice->attr);
+        $this->assertNull($view['addToLists']->vars['attr']['tooltip']);
+
+        $form->submit(['addToLists' => []]);
+
+        $this->assertTrue($form->isValid());
+        $this->assertSame([], $form->getData()['addToLists']);
     }
 }
