@@ -161,7 +161,7 @@ class SegmentCompanyRepository extends CommonRepository
     }
 
     /**
-     * @return array<int, array{id: int|string, name: string}>
+     * @return array<int, array{id: int|string, name: string, createdBy: int|string|null}>
      */
     public function getSegmentsOfCompany(int $companyId): array
     {
@@ -169,7 +169,7 @@ class SegmentCompanyRepository extends CommonRepository
         $companySegmentsTable = MAUTIC_TABLE_PREFIX.CompanySegment::TABLE_NAME;
 
         $sql = <<<SQL
-            SELECT cs.id, cs.name
+            SELECT cs.id, cs.name, cs.created_by AS createdBy
             FROM $tableName sc
             INNER JOIN $companySegmentsTable cs ON sc.segment_id = cs.id
             WHERE sc.manually_removed = :manually_removed
@@ -177,7 +177,7 @@ class SegmentCompanyRepository extends CommonRepository
             ORDER BY cs.name
             SQL;
 
-        /** @var array<int, array{id: int|string, name: string}> $segments */
+        /** @var array<int, array{id: int|string, name: string, createdBy: int|string|null}> $segments */
         $segments = $this->getEntityManager()->getConnection()
             ->executeQuery(
                 $sql,

@@ -36,15 +36,18 @@ class CompanyTypeExtension extends AbstractTypeExtension
             $choices[$segment['name'].' ('.$segment['id'].')'] = (int) $segment['id'];
         }
 
-        $currentSegments = [];
-        $company         = $options['data'] ?? null;
+        $currentSegments  = [];
+        $lockedSegmentIds = [];
+        $company          = $options['data'] ?? null;
         if ($company instanceof Company && null !== $company->getId()) {
             foreach ($this->segmentCompanyRepository->getSegmentsOfCompany($company->getId()) as $segment) {
                 $currentSegments[$segment['name'].' ('.$segment['id'].')'] = (int) $segment['id'];
+                if (!in_array((int) $segment['id'], $choices, true) && !$this->companySegmentModel->canEditCompanySegment((int) $segment['createdBy'])) {
+                    $lockedSegmentIds[] = (int) $segment['id'];
+                }
             }
         }
 
-        $lockedSegmentIds = array_diff($currentSegments, $choices);
         $choices += $currentSegments;
         ksort($choices);
 

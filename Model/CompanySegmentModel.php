@@ -490,11 +490,16 @@ class CompanySegmentModel extends FormModel
     {
         return array_filter(
             $this->getRepository()->getSegments(),
-            fn (array $segment): bool => $this->security->hasEntityAccess(
-                $this->getPermissionBase().':editown',
-                $this->getPermissionBase().':editother',
-                $segment['createdBy'] ?? 0
-            )
+            fn (array $segment): bool => $this->canEditCompanySegment($segment['createdBy'])
+        );
+    }
+
+    public function canEditCompanySegment(?int $createdBy): bool
+    {
+        return $this->security->hasEntityAccess(
+            $this->getPermissionBase().':editown',
+            $this->getPermissionBase().':editother',
+            $createdBy ?? 0
         );
     }
 

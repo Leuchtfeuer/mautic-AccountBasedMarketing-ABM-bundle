@@ -131,6 +131,31 @@ final class CompanySubscriberFunctionalTest extends MauticMysqlTestCase
         $this->assertNotContains((int) $foreign->getId(), $this->getSegmentIdsOfCompany($company));
     }
 
+    public function testUnpublishedSegmentWithEditPermissionCanBeRemoved(): void
+    {
+        $company     = $this->createCompany();
+        $unpublished = $this->createCompanySegment('unpublished', 'unpublished');
+        $unpublished->setIsPublished(false);
+        $this->em->persist($unpublished);
+        $this->em->flush();
+        $this->addCompanyToCompanySegment($company, $unpublished);
+
+        $crawler = $this->client->request(Request::METHOD_GET, '/s/companies/edit/'.$company->getId());
+        $this->assertResponseIsSuccessful();
+
+        $options = $crawler->filter('select[name="company[company_segments][]"] option[value="'.$unpublished->getId().'"]');
+        $this->assertSame([''], $options->extract(['disabled']));
+        $this->assertCount(0, $crawler->filter('label[for="company_company_segments"][data-bs-toggle="tooltip"]'));
+
+        $form                              = $crawler->filter('form[name="company"]')->form();
+        $form['company[company_segments]'] = [];
+        $this->client->submit($form);
+        $this->assertResponseIsSuccessful();
+
+        $this->assertSame([], $this->getSegmentIdsOfCompany($company));
+        $this->assertManuallyRemoved($company, $unpublished);
+    }
+
     private function createCompany(): Company
     {
         $company = new Company();
