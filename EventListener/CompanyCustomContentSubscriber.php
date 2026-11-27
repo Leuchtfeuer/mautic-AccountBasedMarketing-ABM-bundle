@@ -65,6 +65,10 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
 
     public function injectCompanyImportContent(CustomContentEvent $event): void
     {
+        if (!$this->config->isPublished()) {
+            return;
+        }
+
         if (!$event->checkContext(self::IMPORT_VIEW, 'import.defaults')) {
             return;
         }
