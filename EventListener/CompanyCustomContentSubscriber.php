@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 final readonly class CompanyCustomContentSubscriber implements EventSubscriberInterface
 {
     private const COMPANY_VIEW = '@MauticLead/Company/company.html.twig';
+    private const IMPORT_VIEW  = '@MauticLead/Import/_mapping_form.html.twig';
 
     public function __construct(
         private Config $config,
@@ -27,11 +28,14 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
     public static function getSubscribedEvents(): array
     {
         return [
-            CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => ['injectContent', 0],
+            CoreEvents::VIEW_INJECT_CUSTOM_CONTENT => [
+                ['injectTimelineContent', 0],
+                ['injectCompanyImportContent', 0],
+            ],
         ];
     }
 
-    public function injectContent(CustomContentEvent $event): void
+    public function injectTimelineContent(CustomContentEvent $event): void
     {
         if (!$this->config->isPublished()) {
             return;
@@ -57,5 +61,14 @@ final readonly class CompanyCustomContentSubscriber implements EventSubscriberIn
                 'types'   => $this->companyTimelineModel->getEngagementTypes(),
             ],
         ]);
+    }
+
+    public function injectCompanyImportContent(CustomContentEvent $event): void
+    {
+        if (!$event->checkContext(self::IMPORT_VIEW, 'import.defaults')) {
+            return;
+        }
+
+        $event->addTemplate('@LeuchtfeuerAccountBasedMarketingAbm/Import/company_segments.html.twig');
     }
 }

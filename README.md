@@ -13,7 +13,6 @@ This plugin brings company-based Segments to Mautic and extends Mautic capabilit
 
 - Mautic 7.3+
 - PHP 8.2+
-- For the Company `History` tab: Mautic core with [#18106](https://github.com/mautic/mautic/pull/18106) (company view hooks) and [#TBD](https://github.com/mautic/mautic/pull/TBD) (timeline `leadIds` filter). Until they are released, apply them as Composer patches.
 
 ## Installation
 
@@ -52,6 +51,8 @@ Company Segments are populated automatically based on their filters. Filters can
 You can filter for Company Segments in the Company list view. Just enter `companysegment:<company segment alias>` in the filter.
 
 In the Company list view, you can also change Company Segment membership for multiple Companies at once via the batch action `Change Company Segments`.
+
+In the Company import, you can choose Company Segments. All imported Companies are added manually to these Segments. You can only choose Segments that you are allowed to edit.
 
 In Campaigns, you now have a new Action called `Modify Company Segments`. It adds or removes the contact's primary Company from Company Segments.
 
